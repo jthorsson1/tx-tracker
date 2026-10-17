@@ -1,6 +1,10 @@
 {
-  "updated": "",
+  "updated": "test",
   "turnout": { "senate": 1.10, "governor": 1.05 },
-  "senate": {},
+  "senate": {
+    "Harris": [300000, 200000],
+    "Dallas": [250000, 120000],
+    "Travis": [180000, 60000]
+  },
   "governor": {}
 }

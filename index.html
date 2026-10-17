@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Texas Senate 2026: county tracker</title>
+<style>
+:root{--bg:#f6f7f9;--ink:#15202b;--mute:#5b6773;--line:#d9dee4;--panel:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#10161d;--ink:#e8edf2;--mute:#9aa7b4;--line:#27323d;--panel:#171f28}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:900px;margin:0 auto;padding:20px 16px 48px}
+h1{font:700 28px/1.15 Georgia,serif;margin:0 0 4px}
+.sub,.note{color:var(--mute);margin:0 0 14px;font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:0 0 12px}
+.seg button{padding:9px 14px;background:var(--panel);border:0;color:var(--ink);font:inherit;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+svg{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--line)}
+svg path{stroke:var(--bg);stroke-width:.4;cursor:pointer}
+#msg{color:var(--mute);font-size:14px;margin:6px 0}
+#info{min-height:48px;padding:10px 12px;margin:10px 0;background:var(--panel);border-left:4px solid var(--mute)}
+.leg{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mute);margin:4px 0 20px}
+.leg i{flex:0 0 180px;height:10px;background:linear-gradient(90deg,#b2182b,#f7f7f7,#2166ac)}
+.tbl{overflow-x:auto;border-top:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:480px}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+</style>
+</head>
+<body>
+<main>
+<h1>Texas Senate 2026</h1>
+<p class="sub">County tracker: Talarico (D) vs Paxton (R), compared with 2018 (O'Rourke vs Cruz). <span id="upd"></span></p>
+<div class="seg"><button id="bR" aria-pressed="true">2018 result</button><button id="bS" aria-pressed="false">Swing since 2018</button></div>
+<svg id="map" viewBox="0 0 600 560" role="img" aria-label="Map of Texas counties"></svg>
+<div id="msg">Loading map...</div>
+<div class="leg"><span id="l1"></span><i></i><span id="l2"></span></div>
+<div id="info">Click a county on the map or in the table.</div>
+<p class="note" id="cov"></p>
+<div class="tbl"><table>
+<thead><tr><th>County</th><th>2018 margin</th><th>2026 margin</th><th>Swing</th></tr></thead>
+<tbody id="rows"></tbody></table></div>
+<p class="note">Margin is the Democrat's lead or deficit in points among the two main candidates. Swing is the change in that margin since 2018, positive meaning a shift toward Democrats. Grey counties are not tracked yet.</p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+// 2018 Senate by county: [Cruz, O'Rourke]
+const D={"Bastrop":[15049,12082],"Bell":[47437,38417],"Bexar":[217600,326946],"Bowie":[20157,7982],"Brazoria":[65693,45228],"Brazos":[35971,27876],"Cameron":[28574,48770],"Collin":[187425,165614],"Comal":[44079,16830],"Dallas":[241126,481395],"Denton":[158744,134649],"Ector":[20996,9230],"El Paso":[50943,151482],"Ellis":[41022,19106],"Fort Bend":[111423,142399],"Galveston":[67641,45065],"Grayson":[31655,11157],"Gregg":[24569,11133],"Guadalupe":[33938,20079],"Harris":[498902,700200],"Hays":[33308,45584],"Henderson":[20891,5415],"Hidalgo":[46505,104416],"Hood":[20090,4720],"Hunt":[21115,7151],"Jefferson":[36731,37128],"Johnson":[39571,12411],"Kaufman":[26118,12002],"Lubbock":[58780,32068],"McLennan":[45855,28452],"Midland":[32867,9723],"Montgomery":[137395,51268],"Nueces":[45956,47392],"Parker":[44071,9956],"Randall":[38479,9613],"Rockwall":[26615,11754],"Smith":[53760,23182],"Tarrant":[309189,313497],"Taylor":[29811,10489],"Tom Green":[24648,9690],"Travis":[119278,359772],"Webb":[13814,35159],"Wichita":[23648,9971],"Williamson":[99857,105850],"Wise":[19023,3915]};
+const STATE_TOTAL_18=4260553+4045632; // certified canvass
+let mode="r18",V={}; // V: county -> [Talarico, Paxton], loaded from data.json
+const NAMES=Object.keys(D).sort((a,b)=>(D[b][0]+D[b][1])-(D[a][0]+D[a][1]));
+const m18=n=>(D[n][1]-D[n][0])/(D[n][0]+D[n][1])*100;
+const m26=n=>{const v=V[n];return v&&v[0]+v[1]>0?(v[0]-v[1])/(v[0]+v[1])*100:null};
+const sw=n=>{const a=m26(n);return a==null?null:a-m18(n)};
+const fm=x=>x==null?"–":(x>=0?"D+":"R+")+Math.abs(x).toFixed(1);
+function col(n){
+  if(!D[n])return "#c9ced6";
+  const x=mode==="r18"?m18(n):sw(n);
+  if(x==null)return "#c9ced6";
+  const s=mode==="r18"?60:20;
+  return d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/s))/2);
+}
+function show(n){
+  const el=document.getElementById("info");
+  if(!D[n]){el.textContent=n+" County: not tracked yet.";return;}
+  const v=V[n];
+  el.innerHTML="<b>"+n+" County</b><br>2018: Cruz "+D[n][0].toLocaleString()+", O'Rourke "+D[n][1].toLocaleString()+" ("+fm(m18(n))+")"+
+    (v?"<br>2026: Talarico "+v[0].toLocaleString()+", Paxton "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")":"<br>2026: no votes entered yet");
+}
+function paint(){
+  d3.selectAll("#map path").attr("fill",f=>col(f.properties.NAME));
+  document.getElementById("bR").setAttribute("aria-pressed",mode==="r18");
+  document.getElementById("bS").setAttribute("aria-pressed",mode==="sw");
+  document.getElementById("l1").textContent=mode==="r18"?"R+60":"R+20";
+  document.getElementById("l2").textContent=mode==="r18"?"D+60":"D+20";
+}
+function table(){
+  document.getElementById("rows").innerHTML=NAMES.map(n=>"<tr data-n=\""+n+"\"><td>"+n+"</td><td>"+fm(m18(n))+"</td><td>"+fm(m26(n))+"</td><td>"+fm(sw(n))+"</td></tr>").join("");
+  const tot=NAMES.reduce((s,n)=>s+D[n][0]+D[n][1],0);
+  document.getElementById("cov").textContent=NAMES.length+" tracked counties cast "+(tot/STATE_TOTAL_18*100).toFixed(1)+"% of the 2018 two-party vote.";
+}
+document.getElementById("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr)show(tr.dataset.n)};
+document.getElementById("bR").onclick=()=>{mode="r18";paint()};
+document.getElementById("bS").onclick=()=>{mode="sw";paint()};
+
+fetch("data.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
+  V=j.votes||{};
+  if(j.updated)document.getElementById("upd").textContent="Updated "+j.updated+".";
+}).catch(()=>{}).finally(()=>{
+  table();
+  fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json").then(r=>r.json()).then(g=>{
+    const tx=g.features.filter(f=>(f.properties&&f.properties.STATE==="48")||String(f.id).startsWith("48"));
+    const proj=d3.geoMercator().fitSize([600,560],{type:"FeatureCollection",features:tx});
+    d3.select("#map").selectAll("path").data(tx).join("path").attr("d",d3.geoPath(proj))
+      .on("click",(e,f)=>show(f.properties.NAME));
+    document.getElementById("msg").textContent="";
+    paint();
+  }).catch(()=>{
+    document.getElementById("msg").textContent="The map could not load. The table below still works.";
+    paint();
+  });
+});
+</script>
+</body>
+</html>

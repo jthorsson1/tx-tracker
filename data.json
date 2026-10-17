@@ -1,4 +1,6 @@
 {
   "updated": "",
-  "votes": {}
+  "turnout": { "senate": 1.10, "governor": 1.05 },
+  "senate": {},
+  "governor": {}
 }

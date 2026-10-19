@@ -173,17 +173,19 @@ fetch("data.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
   if(j.updated)el("upd").textContent="Updated "+j.updated+".";
 }).catch(()=>{}).finally(()=>{
   setRace(K);
-  fetch("https://raw.githubusercontent.com/rossby-info/_rossby_usa_county_fips_geojson/refs/heads/main/usa.counties.min.geojson").then(r=>r.json(().then(g=>(
-    const tx=g.features.filter(f=>(f.properties&&f.properties.STATE==="48")||String(f.id).startsWith("48"));
-    const proj=d3.geoMercator().fitSize([600,560],{type:"FeatureCollection",features:tx});
-    d3.select("#map").selectAll("path").data(tx).join("path").attr("d",d3.geoPath(proj))
-      .on("click",(e,f)=>show(f.properties.NAME));
-    el("msg").textContent="";
-    paint();
-  }).catch(()=>{
-    el("msg").textContent="The map could not load. The table below still works.";
-  });
-});
-</script>
+  fetch("https://raw.githubusercontent.com/rossby-info/_rossby_usa_county_fips_geojson/refs/heads/main/usa.counties.min.geojson")
+    .then(r => r.json())
+    .then(g => {
+      const tx = g.features.filter(f => (f.properties && f.properties.STATE === "48") || String(f.id).startsWith("48"));
+      const proj = d3.geoMercator().fitSize([600,560], {type:"FeatureCollection", features:tx});
+      d3.select("#map").selectAll("path").data(tx).join("path").attr("d", d3.geoPath(proj))
+        .on("click", (e,f) => show(f.properties.NAME));
+      el("msg").textContent = "";
+      paint();
+    })
+    .catch(()=>{
+      el("msg").textContent="The map could not load. The table below still works.";
+    });
+});</script>
 </body>
 </html>

@@ -21,6 +21,7 @@ jobs:
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
+        with:
           python-version: "3.12"
           
       - name: Fetch results from civicAPI
@@ -34,4 +35,3 @@ jobs:
             git commit -m "Update results"
             git pull --rebase origin main
             git push origin HEAD:main
-            fi

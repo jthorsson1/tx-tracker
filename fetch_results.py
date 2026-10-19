@@ -11,7 +11,8 @@ baseline in data.json so the output always contains entries for all counties
 
 Changes: more tolerant candidate matching (case-insensitive, substring,
 normalized) plus a party-based fallback when name matching fails. Logs
-mismatches to make diagnostics easier.
+are now compact: an aggregated summary is always printed and per-county
+messages are only printed for true no-match counties.
 """
 import datetime
 import json
@@ -47,6 +48,42 @@ CONFIG = {
     },
 }
 
+# Aggregated counters for matching methods for the current run
+MATCH_COUNTS = {
+    "exact": 0,
+    "ci": 0,
+    "substr": 0,
+    "norm": 0,
+    "party_prefix": 0,
+    "party_fallback": 0,
+    "none": 0,
+}
+
+# List of problem counties: (county_name, reason, candidates_list)
+PROBLEMS = []
+
+def _reset_counters():
+    for k in MATCH_COUNTS:
+        MATCH_COUNTS[k] = 0
+    PROBLEMS.clear()
+
+def _print_summary():
+    print(
+        "Match summary: exact={exact}, ci={ci}, substr={substr}, norm={norm}, party_prefix={party_prefix}, party_fallback={party_fallback}, none={none}, problems={problems_count}".format(
+            exact=MATCH_COUNTS["exact"],
+            ci=MATCH_COUNTS["ci"],
+            substr=MATCH_COUNTS["substr"],
+            norm=MATCH_COUNTS["norm"],
+            party_prefix=MATCH_COUNTS["party_prefix"],
+            party_fallback=MATCH_COUNTS["party_fallback"],
+            none=MATCH_COUNTS["none"],
+            problems_count=len(PROBLEMS),
+        )
+    )
+    if PROBLEMS:
+        print("Problem counties (both or one candidate missing):")
+        for name, reason, cand_names in PROBLEMS:
+            print(f" - {name}: {reason}; candidates: {cand_names}")
 
 def fetch(race_id, tries=3):
     """Fetch a race by numeric id and return its parsed JSON, or None on failure."""
@@ -59,7 +96,6 @@ def fetch(race_id, tries=3):
             print("fetch error for race", race_id, "->", e)
             time.sleep(3 * (attempt + 1))
     return None
-
 
 def search_and_fetch(query, tries=3):
     """Search civicAPI for a race matching query and return the full race JSON for the
@@ -80,14 +116,12 @@ def search_and_fetch(query, tries=3):
             time.sleep(3 * (attempt + 1))
     return None
 
-
 def _norm_name(s):
     if not s:
         return ""
     s = str(s).strip()
     # remove punctuation and whitespace for a normalized compare
     return re.sub(r"[^a-z0-9]", "", s.lower())
-
 
 def pick(cands, spec):
     """Tolerant matching for a candidate in the per-region candidate list.
@@ -101,46 +135,53 @@ def pick(cands, spec):
     If the spec is a party match and a name-based lookup fails, we will use
     party matching where sensible (see extract_counties fallback behavior).
 
-    Returns the selected candidate dict or None.
+    Returns a tuple (candidate_dict_or_None, method_str).
+    method_str is one of: 'exact','ci','substr','norm','party_prefix','none'
     """
     if not cands:
-        return None
+        MATCH_COUNTS["none"] += 1
+        return None, "none"
     kind, value = spec
     val = (value or "")
 
     # Exact match first
     found = [c for c in cands if c.get(kind) == value]
     if found:
-        return max(found, key=lambda c: c.get("votes") or 0)
+        MATCH_COUNTS["exact"] += 1
+        return max(found, key=lambda c: c.get("votes") or 0), "exact"
 
     # Case-insensitive equality
     found = [c for c in cands if str(c.get(kind, "")).strip().lower() == val.strip().lower()]
     if found:
-        return max(found, key=lambda c: c.get("votes") or 0)
+        MATCH_COUNTS["ci"] += 1
+        return max(found, key=lambda c: c.get("votes") or 0), "ci"
 
     # Substring match (value contained in candidate field)
     lval = val.strip().lower()
     if lval:
         found = [c for c in cands if lval in str(c.get(kind, "")).lower()]
         if found:
-            return max(found, key=lambda c: c.get("votes") or 0)
+            MATCH_COUNTS["substr"] += 1
+            return max(found, key=lambda c: c.get("votes") or 0), "substr"
 
     # Normalized match (remove punctuation/spacing)
     nval = _norm_name(val)
     if nval:
         found = [c for c in cands if nval and nval in _norm_name(c.get(kind, ""))]
         if found:
-            return max(found, key=lambda c: c.get("votes") or 0)
+            MATCH_COUNTS["norm"] += 1
+            return max(found, key=lambda c: c.get("votes") or 0), "norm"
 
     # If kind is 'party', try prefix matching (e.g., 'Dem' matches 'Democratic')
     if kind == "party":
         lwant = val.strip().lower()
         found = [c for c in cands if c.get("party") and c.get("party").strip().lower().startswith(lwant)]
         if found:
-            return max(found, key=lambda c: c.get("votes") or 0)
+            MATCH_COUNTS["party_prefix"] += 1
+            return max(found, key=lambda c: c.get("votes") or 0), "party_prefix"
 
-    return None
-
+    MATCH_COUNTS["none"] += 1
+    return None, "none"
 
 def _find_by_party(cands, party_name):
     if not cands:
@@ -159,7 +200,6 @@ def _find_by_party(cands, party_name):
             return c
     return None
 
-
 def extract_counties(race, dspec, rspec):
     """Extract county vote pairs from a civicAPI race JSON without enforcing the
     "complete" threshold. Returns (counties_dict, top_level_statewide_or_None).
@@ -171,42 +211,40 @@ def extract_counties(race, dspec, rspec):
         if region.get("type") != "County":
             continue
         cands = region.get("candidates", []) or []
-        # Log candidate names once for diagnosis when necessary
+        # Candidate names for diagnostics
         cand_names = [f"{c.get('name') or '<no-name>'} ({c.get('party') or ''})" for c in cands]
-        d = pick(cands, dspec)
-        r = pick(cands, rspec)
+        d_cand, d_method = pick(cands, dspec)
+        r_cand, r_method = pick(cands, rspec)
 
         # If name-based picks failed, fall back to party matching where possible
-        if d is None and dspec[0] == "name":
-            # try to find a Democratic candidate in this region
+        if d_cand is None and dspec[0] == "name":
             fb = _find_by_party(cands, "Democratic")
             if fb:
-                print(f"fallback DEM by party in {region.get('name')}: using {fb.get('name')} from {cand_names}")
-                d = fb
-        if r is None and rspec[0] == "name":
+                MATCH_COUNTS["party_fallback"] += 1
+                d_cand = fb
+        if r_cand is None and rspec[0] == "name":
             fb = _find_by_party(cands, "Republican")
             if fb:
-                print(f"fallback REP by party in {region.get('name')}: using {fb.get('name')} from {cand_names}")
-                r = fb
+                MATCH_COUNTS["party_fallback"] += 1
+                r_cand = fb
 
-        if d is None or r is None:
-            # Helpful debug output for later analysis
-            if d is None and r is None:
-                print(f"no match for both candidates in {region.get('name')}; candidates: {cand_names}")
-            elif d is None:
-                print(f"no match for DEM ({dspec}) in {region.get('name')}; candidates: {cand_names}")
+        # Record problems only; do not print per-county success messages
+        if d_cand is None or r_cand is None:
+            if d_cand is None and r_cand is None:
+                PROBLEMS.append((region.get("name"), "both", cand_names))
+            elif d_cand is None:
+                PROBLEMS.append((region.get("name"), "dem", cand_names))
             else:
-                print(f"no match for REP ({rspec}) in {region.get('name')}; candidates: {cand_names}")
+                PROBLEMS.append((region.get("name"), "rep", cand_names))
 
-        counties[region.get("name")] = [int((d or {}).get("votes") or 0), int((r or {}).get("votes") or 0)]
+        counties[region.get("name")] = [int((d_cand or {}).get("votes") or 0), int((r_cand or {}).get("votes") or 0)]
     # Try to get a top-level statewide total if present
-    d = pick(race.get("candidates", []) or [], dspec)
-    r = pick(race.get("candidates", []) or [], rspec)
+    d_top, _ = pick(race.get("candidates", []) or [], dspec)
+    r_top, _ = pick(race.get("candidates", []) or [], rspec)
     top = None
-    if d is not None and r is not None:
-        top = [int(d.get("votes") or 0), int(r.get("votes") or 0)]
+    if d_top is not None and r_top is not None:
+        top = [int(d_top.get("votes") or 0), int(r_top.get("votes") or 0)]
     return counties, top
-
 
 def convert(race, dspec, rspec):
     """Original strict convert: used to enforce completeness. Kept for logging.
@@ -221,7 +259,6 @@ def convert(race, dspec, rspec):
         return None
     return counties, top
 
-
 def merge_with_baseline(new_counties, baseline_counties):
     """Merge new_counties into baseline_counties: baseline provides default for
     missing counties; new_counties override baseline values where present."""
@@ -229,12 +266,10 @@ def merge_with_baseline(new_counties, baseline_counties):
     merged.update(new_counties)
     return merged
 
-
 def compute_statewide_from_counties(counties):
     d_sum = sum(v[0] for v in counties.values())
     r_sum = sum(v[1] for v in counties.values())
     return [d_sum, r_sum]
-
 
 def main(root=None):
     root = pathlib.Path(root) if root else pathlib.Path(__file__).resolve().parent
@@ -248,6 +283,8 @@ def main(root=None):
     data = json.loads(data_file.read_text()) if data_file.exists() else {}
     data.setdefault("turnout", {"senate": 1.10, "governor": 1.05})
     before = json.dumps({k: data.get(k) for k in ("senate", "governor")}, sort_keys=True)
+
+    _reset_counters()
 
     for key, (race_spec, dspec, rspec) in CONFIG[mode].items():
         race = None
@@ -294,6 +331,9 @@ def main(root=None):
         new["Statewide"] = statewide
         data[key] = new
 
+    # Print compact summary of matching behavior for this run
+    _print_summary()
+
     after = json.dumps({k: data.get(k) for k in ("senate", "governor")}, sort_keys=True)
     if after == before:
         print("no change")
@@ -303,7 +343,6 @@ def main(root=None):
     data_file.write_text(json.dumps(data, indent=1) + "\n")
     print("wrote data.json")
     return True
-
 
 if __name__ == "__main__":
     main()

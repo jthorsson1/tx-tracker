@@ -8,6 +8,10 @@ Each county is stored as [Democrat votes, Republican votes].
 This version will merge partial county results from civicAPI into an existing
 baseline in data.json so the output always contains entries for all counties
 (where possible) instead of rejecting partial fetches outright.
+
+Changes: more tolerant candidate matching (case-insensitive, substring,
+normalized) plus a party-based fallback when name matching fails. Logs
+mismatches to make diagnostics easier.
 """
 import datetime
 import json
@@ -16,6 +20,7 @@ import sys
 import time
 import urllib.request
 import urllib.parse
+import re
 from zoneinfo import ZoneInfo
 
 API = "https://civicapi.org/api/v2/race/"
@@ -76,23 +81,123 @@ def search_and_fetch(query, tries=3):
     return None
 
 
+def _norm_name(s):
+    if not s:
+        return ""
+    s = str(s).strip()
+    # remove punctuation and whitespace for a normalized compare
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
 def pick(cands, spec):
+    """Tolerant matching for a candidate in the per-region candidate list.
+
+    Tries, in order:
+      - exact equality on the requested field
+      - case-insensitive equality
+      - substring match (case-insensitive)
+      - normalized token match (remove punctuation/spacing)
+
+    If the spec is a party match and a name-based lookup fails, we will use
+    party matching where sensible (see extract_counties fallback behavior).
+
+    Returns the selected candidate dict or None.
+    """
+    if not cands:
+        return None
     kind, value = spec
+    val = (value or "")
+
+    # Exact match first
     found = [c for c in cands if c.get(kind) == value]
-    return max(found, key=lambda c: c.get("votes") or 0) if found else None
+    if found:
+        return max(found, key=lambda c: c.get("votes") or 0)
+
+    # Case-insensitive equality
+    found = [c for c in cands if str(c.get(kind, "")).strip().lower() == val.strip().lower()]
+    if found:
+        return max(found, key=lambda c: c.get("votes") or 0)
+
+    # Substring match (value contained in candidate field)
+    lval = val.strip().lower()
+    if lval:
+        found = [c for c in cands if lval in str(c.get(kind, "")).lower()]
+        if found:
+            return max(found, key=lambda c: c.get("votes") or 0)
+
+    # Normalized match (remove punctuation/spacing)
+    nval = _norm_name(val)
+    if nval:
+        found = [c for c in cands if nval and nval in _norm_name(c.get(kind, ""))]
+        if found:
+            return max(found, key=lambda c: c.get("votes") or 0)
+
+    # If kind is 'party', try prefix matching (e.g., 'Dem' matches 'Democratic')
+    if kind == "party":
+        lwant = val.strip().lower()
+        found = [c for c in cands if c.get("party") and c.get("party").strip().lower().startswith(lwant)]
+        if found:
+            return max(found, key=lambda c: c.get("votes") or 0)
+
+    return None
+
+
+def _find_by_party(cands, party_name):
+    if not cands:
+        return None
+    want = (party_name or "").strip().lower()
+    if not want:
+        return None
+    # prefer prefix match
+    for c in cands:
+        p = (c.get("party") or "").strip().lower()
+        if p.startswith(want):
+            return c
+    # fallback: any candidate whose party contains the token
+    for c in cands:
+        if want in (c.get("party") or "").strip().lower():
+            return c
+    return None
 
 
 def extract_counties(race, dspec, rspec):
     """Extract county vote pairs from a civicAPI race JSON without enforcing the
     "complete" threshold. Returns (counties_dict, top_level_statewide_or_None).
-    counties_dict maps county name -> [D_votes, R_votes]."""
+    counties_dict maps county name -> [D_votes, R_votes].
+    """
     regions = race.get("region_results") or {}
     counties = {}
     for region in regions.values():
         if region.get("type") != "County":
             continue
-        d = pick(region.get("candidates", []), dspec)
-        r = pick(region.get("candidates", []), rspec)
+        cands = region.get("candidates", []) or []
+        # Log candidate names once for diagnosis when necessary
+        cand_names = [f"{c.get('name') or '<no-name>'} ({c.get('party') or ''})" for c in cands]
+        d = pick(cands, dspec)
+        r = pick(cands, rspec)
+
+        # If name-based picks failed, fall back to party matching where possible
+        if d is None and dspec[0] == "name":
+            # try to find a Democratic candidate in this region
+            fb = _find_by_party(cands, "Democratic")
+            if fb:
+                print(f"fallback DEM by party in {region.get('name')}: using {fb.get('name')} from {cand_names}")
+                d = fb
+        if r is None and rspec[0] == "name":
+            fb = _find_by_party(cands, "Republican")
+            if fb:
+                print(f"fallback REP by party in {region.get('name')}: using {fb.get('name')} from {cand_names}")
+                r = fb
+
+        if d is None or r is None:
+            # Helpful debug output for later analysis
+            if d is None and r is None:
+                print(f"no match for both candidates in {region.get('name')}; candidates: {cand_names}")
+            elif d is None:
+                print(f"no match for DEM ({dspec}) in {region.get('name')}; candidates: {cand_names}")
+            else:
+                print(f"no match for REP ({rspec}) in {region.get('name')}; candidates: {cand_names}")
+
         counties[region.get("name")] = [int((d or {}).get("votes") or 0), int((r or {}).get("votes") or 0)]
     # Try to get a top-level statewide total if present
     d = pick(race.get("candidates", []) or [], dspec)

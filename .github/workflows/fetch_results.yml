@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-dept: 0
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
           python-version: "3.12"
@@ -32,6 +32,6 @@ jobs:
           git add data.json
           if ! git diff --staged --quiet; then 
             git commit -m "Update results"
-            git pull --rebase orgin main
+            git pull --rebase origin main
             git push origin HEAD:main
             fi

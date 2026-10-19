@@ -46,14 +46,14 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 <div class="tbl"><table>
 <thead><tr><th>County</th><th id="hy">Past margin</th><th>2026 margin</th><th>Swing</th></tr></thead>
 <tbody id="rows"></tbody></table></div>
-<p class="note">Margin is the Democrat's lead or deficit in points among the two main candidates. Swing is the change in that margin since the past election, positive meaning a shift toward Democrats. Grey counties are not tracked yet.</p>
+<p class="note">Margin is the Democrat's lead or deficit in points among the two main candidates. Swing is the change in that margin since the past election, positive meaning a shift toward Democr[...]
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
 // 2018 Senate by county: [Cruz, O'Rourke]
-const SEN={"Bastrop":[15049,12082],"Bell":[47437,38417],"Bexar":[217600,326946],"Bowie":[20157,7982],"Brazoria":[65693,45228],"Brazos":[35971,27876],"Cameron":[28574,48770],"Collin":[187425,165614],"Comal":[44079,16830],"Dallas":[241126,481395],"Denton":[158744,134649],"Ector":[20996,9230],"El Paso":[50943,151482],"Ellis":[41022,19106],"Fort Bend":[111423,142399],"Galveston":[67641,45065],"Grayson":[31655,11157],"Gregg":[24569,11133],"Guadalupe":[33938,20079],"Harris":[498902,700200],"Hays":[33308,45584],"Henderson":[20891,5415],"Hidalgo":[46505,104416],"Hood":[20090,4720],"Hunt":[21115,7151],"Jefferson":[36731,37128],"Johnson":[39571,12411],"Kaufman":[26118,12002],"Lubbock":[58780,32068],"McLennan":[45855,28452],"Midland":[32867,9723],"Montgomery":[137395,51268],"Nueces":[45956,47392],"Parker":[44071,9956],"Randall":[38479,9613],"Rockwall":[26615,11754],"Smith":[53760,23182],"Tarrant":[309189,313497],"Taylor":[29811,10489],"Tom Green":[24648,9690],"Travis":[119278,359772],"Webb":[13814,35159],"Wichita":[23648,9971],"Williamson":[99857,105850],"Wise":[19023,3915]};
+const SEN={"Bastrop":[15049,12082],"Bell":[47437,38417],"Bexar":[217600,326946],"Bowie":[20157,7982],"Brazoria":[65693,45228],"Brazos":[35971,27876],"Cameron":[28574,48770],"Collin":[187425,165614,[...]
 // 2022 Governor by county: [Abbott, Beto O'Rourke]
-const GOV={"Bastrop":[16707,12007],"Bell":[51888,34785],"Bexar":[221993,311023],"Bowie":[20206,6060],"Brazoria":[64938,43364],"Brazos":[35768,23103],"Cameron":[34290,41667],"Collin":[198236,161737],"Comal":[54503,19195],"Dallas":[224684,392634],"Denton":[177017,136389],"Ector":[19212,5950],"El Paso":[57573,105156],"Ellis":[45564,21338],"Fort Bend":[117249,129116],"Galveston":[68822,40229],"Grayson":[34903,9563],"Gregg":[24223,8662],"Guadalupe":[36882,19356],"Harris":[490261,595653],"Hays":[39085,48970],"Henderson":[22909,4798],"Hidalgo":[56783,82671],"Hood":[22596,4301],"Hunt":[23744,6422],"Jefferson":[34988,26641],"Johnson":[42954,12266],"Kaufman":[28306,14024],"Lubbock":[58163,24497],"McLennan":[47875,23765],"Midland":[32389,7154],"Montgomery":[152694,52654],"Nueces":[47567,40474],"Parker":[52523,10123],"Randall":[39243,8228],"Rockwall":[30211,12132],"Smith":[56608,18763],"Tarrant":[303600,279423],"Taylor":[30030,8888],"Tom Green":[23873,7516],"Travis":[119321,334667],"Webb":[16409,27156],"Wichita":[23328,7824],"Williamson":[111488,110242],"Wise":[21979,3538]};
+const GOV={"Bastrop":[16707,12007],"Bell":[51888,34785],"Bexar":[221993,311023],"Bowie":[20206,6060],"Brazoria":[64938,43364],"Brazos":[35768,23103],"Cameron":[34290,41667],"Collin":[198236,161737,[...]
 const CFG={
   sen:{label:"U.S. Senate",yr:2018,rn:"Cruz",dn:"O'Rourke",r26:"Paxton",d26:"Talarico",total:4260553+4045632,sR:4260553,sD:4045632,D:SEN},
   gov:{label:"Governor",yr:2022,rn:"Abbott",dn:"Beto O'Rourke",r26:"Abbott",d26:"Hinojosa",total:4437099+3553656,sR:4437099,sD:3553656,D:GOV}
@@ -62,7 +62,12 @@ const VOTES={sen:{},gov:{}}; // county -> [Democrat, Republican], loaded from da
 const TURN={sen:1.10,gov:1.05}; // expected 2026 vote compared with the past election; set in data.json
 let K="sen",C=CFG.sen,D=C.D,NAMES=[],mode="r18";
 const el=id=>document.getElementById(id);
-const m18=n=>(D[n][1]-D[n][0])/(D[n][0]+D[n][1])*100;
+// safer baseline margin: return 0 if baseline missing or zero
+const m18 = n => {
+  const dd = D[n];
+  if (!dd || (dd[0] + dd[1]) === 0) return 0;
+  return (dd[1] - dd[0]) / (dd[0] + dd[1]) * 100;
+};
 const m26=n=>{const v=VOTES[K][n];return v&&v[0]+v[1]>0?(v[0]-v[1])/(v[0]+v[1])*100:null};
 const sw=n=>{const a=m26(n);return a==null?null:a-m18(n)};
 const fm=x=>x==null?"–":(x>=0?"D+":"R+")+Math.abs(x).toFixed(1);
@@ -92,15 +97,26 @@ function table(){
   el("cov").textContent=NAMES.length+" tracked counties cast "+(tot/C.total*100).toFixed(1)+"% of the "+C.yr+" two-party vote.";
 }
 function setRace(k){
-  K=k;C=CFG[k];D=C.D;
-  NAMES=Object.keys(D).sort((a,b)=>(D[b][0]+D[b][1])-(D[a][0]+D[a][1]));
-  el("h1").textContent="Texas 2026: "+C.label;
-  el("sub").textContent="County tracker: "+C.d26+" (D) vs "+C.r26+" (R), compared with "+C.yr+" ("+C.dn+" vs "+C.rn+").";
-  el("bR").textContent=C.yr+" result";el("bS").textContent="Swing since "+C.yr;
-  el("hy").textContent=C.yr+" margin";
-  el("tS").setAttribute("aria-pressed",k==="sen");el("tG").setAttribute("aria-pressed",k==="gov");
-  el("info").textContent="Click a county on the map or in the table.";
-  table();paint();needle();
+  K = k;
+  C = CFG[k];
+  // Build a union of the historical baseline and any counties present in data.json
+  const baseline = Object.assign({}, C.D || {});
+  const votesForRace = VOTES[K] || {};
+  Object.keys(votesForRace).forEach(n => {
+    if (!(n in baseline)) baseline[n] = [0, 0];
+  });
+  // Use the unioned baseline for display and calculations
+  D = baseline;
+  // Also update the CFG entry so other functions that read C.D see the union
+  C.D = D;
+  NAMES = Object.keys(D).sort((a, b) => (D[b][0] + D[b][1]) - (D[a][0] + D[a][1]));
+  el("h1").textContent = "Texas 2026: " + C.label;
+  el("sub").textContent = "County tracker: " + C.d26 + " (D) vs " + C.r26 + " (R), compared with " + C.yr + " (" + C.dn + " vs " + C.rn + ").";
+  el("bR").textContent = C.yr + " result"; el("bS").textContent = "Swing since " + C.yr;
+  el("hy").textContent = C.yr + " margin";
+  el("tS").setAttribute("aria-pressed", k === "sen"); el("tG").setAttribute("aria-pressed", k === "gov");
+  el("info").textContent = "Click a county on the map or in the table.";
+  table(); paint(); needle();
 }
 // Needle math: project the statewide margin from counted votes, county by county.
 function erf(x){const t=1/(1+0.3275911*Math.abs(x)),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y}
@@ -132,12 +148,12 @@ function needle(){
   const Y=m=>150-Math.max(-15,Math.min(15,m))*260/30,lo=p.M-1.2816*p.sd,hi=p.M+1.2816*p.sd,y=Y(p.M);
   const sg=x=>(x>=0?"D+":"R+")+Math.abs(x).toFixed(1),lead=p.M>=0?C.d26:C.r26;
   box.innerHTML="<svg class=\"gauge\" viewBox=\"0 0 110 300\" role=\"img\" aria-label=\"Projected margin gauge\">"+
-    "<defs><linearGradient id=\"gg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2166ac\"/><stop offset=\".5\" stop-color=\"#f7f7f7\"/><stop offset=\"1\" stop-color=\"#b2182b\"/></linearGradient></defs>"+
+    "<defs><linearGradient id=\"gg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2166ac\"/><stop offset=\".5\" stop-color=\"#f7f7f7\"/><stop offset=\"1\" stop-color=\"#b2[...]"+
     "<rect x=\"30\" y=\"20\" width=\"26\" height=\"260\" fill=\"url(#gg)\" opacity=\".6\"/>"+
     "<line x1=\"24\" x2=\"62\" y1=\"150\" y2=\"150\" stroke=\"currentColor\"/>"+
     "<rect x=\"30\" y=\""+Y(hi)+"\" width=\"26\" height=\""+(Y(lo)-Y(hi))+"\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/>"+
     "<polygon points=\"68,"+(y-8)+" 68,"+(y+8)+" 57,"+y+"\" fill=\"currentColor\"/>"+
-    "<text x=\"2\" y=\"16\" font-size=\"10\" fill=\"currentColor\">D+15</text><text x=\"2\" y=\"296\" font-size=\"10\" fill=\"currentColor\">R+15</text><text x=\"0\" y=\"154\" font-size=\"10\" fill=\"currentColor\">even</text></svg>"+
+    "<text x=\"2\" y=\"16\" font-size=\"10\" fill=\"currentColor\">D+15</text><text x=\"2\" y=\"296\" font-size=\"10\" fill=\"currentColor\">R+15</text><text x=\"0\" y=\"154\" font-size=\"10\" fi[...]"+
     "<div class=\"nt\"><div class=\"big\">"+lead+" +"+Math.abs(p.M).toFixed(1)+"</div>"+
     "<p>"+C.d26+" "+(p.chance*100).toFixed(0)+"% &middot; "+C.r26+" "+((1-p.chance)*100).toFixed(0)+"% chance to win</p>"+
     "<p>80% range: "+sg(lo)+" to "+sg(hi)+"</p>"+

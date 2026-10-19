@@ -29,93 +29,144 @@ th:first-child,td:first-child{text-align:left}
 svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 .nt .big{font:700 30px/1.1 Georgia,serif}
 .nt p{margin:6px 0}
+#vl{margin:0 0 20px;padding:12px;background:var(--panel);border:1px solid var(--line)}
+#vl h3{margin:0 0 6px;font:600 16px/1.2 Georgia,serif}
+#vl p{margin:6px 0}
+[hidden]{display:none!important}
+.g{display:grid;grid-template-columns:minmax(110px,170px) 1fr 58px;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.g small{display:block;color:var(--mute)}
+.g b{text-align:right;font-variant-numeric:tabular-nums}
+.ebar{position:relative;height:14px}
+.ebar:before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--mute)}
+.ebar i{position:absolute;top:2px;bottom:2px;border-radius:2px}
 </style>
 </head>
 <body>
 <main>
 <h1 id="h1">Texas 2026</h1>
 <p class="sub"><span id="sub"></span> <span id="upd"></span></p>
-<div class="seg"><button id="tS" aria-pressed="true">Senate</button><button id="tG" aria-pressed="false">Governor</button></div>
-<div class="seg"><button id="bR" aria-pressed="true">Past result</button><button id="bS" aria-pressed="false">Swing</button></div>
+<div class="seg"><button id="tS" aria-pressed="true">Senate</button><button id="tG" aria-pressed="false">Governor</button><button id="tE" aria-pressed="false">Early vote</button></div>
+<div id="raceView">
+<div class="seg"><button id="bR" aria-pressed="true">Past result</button><button id="bT" aria-pressed="false">2026 result</button><button id="bS" aria-pressed="false">Swing</button><button id="bV" aria-pressed="false">Vote left</button></div>
 <div class="needle" id="ndl"></div>
+<div id="vl"></div>
 <svg id="map" viewBox="0 0 600 560" role="img" aria-label="Map of Texas counties"></svg>
 <div id="msg">Loading map...</div>
 <div class="leg"><span id="l1"></span><i></i><span id="l2"></span></div>
+<p class="note" id="vcap"></p>
 <div id="info">Click a county on the map or in the table.</div>
 <p class="note" id="cov"></p>
 <div class="tbl"><table>
-<thead><tr><th>County</th><th id="hy">Past margin</th><th>2026 margin</th><th>Swing</th></tr></thead>
+<thead><tr><th>County</th><th>2026 votes</th><th id="hy">Past margin</th><th>2026 margin</th><th>Swing</th></tr></thead>
 <tbody id="rows"></tbody></table></div>
-<p class="note">Margin is the Democrat's lead or deficit in points among the two main candidates. Swing is the change in that margin since the past election, positive meaning a shift toward Democrat-margins.</p>
+<p class="note">Margin is the Democrat's lead or deficit in points among the two main candidates. Swing is the change in that margin since the past election, positive meaning a shift toward Democrats. Grey counties have no data in the selected view. Counties with no past result loaded show a dash for past margin and swing.</p>
+<p class="note">Results come from <a href="https://civicapi.org">civicAPI</a>, checked every 5 minutes, and are unofficial. Official results are from the Texas Secretary of State.</p>
+</div>
+<div id="earlyView" hidden>
+<div class="seg"><button id="e22" aria-pressed="true">vs 2022 (governor)</button><button id="e18" aria-pressed="false">vs 2018 (Senate)</button></div>
+<p class="note" id="eInfo"></p>
+<div id="eSum"></div>
+<div class="tbl"><table>
+<thead><tr><th>County</th><th>Group</th><th id="eh">2022</th><th>2026</th><th>Ratio</th></tr></thead>
+<tbody id="eRows"></tbody></table></div>
+<p class="note">Early ballots cast (in-person plus mail) through close of business on the same day of early voting: day 1 is Oct 19, 2026, Oct 22, 2018 and Oct 24, 2022. A ratio of 1.20 means 20% more early ballots than that year. Groups add up ballots first and then divide, so big counties count more. Texas registration is up about 8% since 2022 and roughly 20% since 2018, so a ratio near 1.08 against 2022 or 1.20 against 2018 means turnout is only keeping pace with registration. Only the 45 tracked counties are included, and the 2018 site has early numbers for 30 of them. Source: Texas Secretary of State early voting reports.</p>
+</div>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
 // 2018 Senate by county: [Cruz, O'Rourke]
-const SEN={"Bastrop":[15049,12082],"Bell":[47437,38417],"Bexar":[217600,326946],"Bowie":[20157,7982],"Brazoria":[65693,45228],"Brazos":[35971,27876],"Cameron":[28574,48770],"Collin":[187425,165614],"Coryell":[7422,4856],"Dallas":[198293,274916],"Denton":[124238,103791],"Ector":[12838,10632],"ElPaso":[74535,57208],"FortBend":[105027,133586],"Galveston":[33108,21285],"Harris":[624912,619666],"Hidalgo":[56810,32268],"Jefferson":[23993,37497],"Lubbock":[23418,19470],"McLennan":[21819,21053],"Montgomery":[58247,51685],"Nueces":[38954,28299],"Tarrant":[119872,139337],"Travis":[161452,82568],"Williamson":[61207,36163]};
+const SEN={"Bastrop":[15049,12082],"Bell":[47437,38417],"Bexar":[217600,326946],"Bowie":[20157,7982],"Brazoria":[65693,45228],"Brazos":[35971,27876],"Cameron":[28574,48770],"Collin":[187425,165614],"Comal":[44079,16830],"Dallas":[241126,481395],"Denton":[158744,134649],"Ector":[20996,9230],"El Paso":[50943,151482],"Ellis":[41022,19106],"Fort Bend":[111423,142399],"Galveston":[67641,45065],"Grayson":[31655,11157],"Gregg":[24569,11133],"Guadalupe":[33938,20079],"Harris":[498902,700200],"Hays":[33308,45584],"Henderson":[20891,5415],"Hidalgo":[46505,104416],"Hood":[20090,4720],"Hunt":[21115,7151],"Jefferson":[36731,37128],"Johnson":[39571,12411],"Kaufman":[26118,12002],"Lubbock":[58780,32068],"McLennan":[45855,28452],"Midland":[32867,9723],"Montgomery":[137395,51268],"Nueces":[45956,47392],"Parker":[44071,9956],"Randall":[38479,9613],"Rockwall":[26615,11754],"Smith":[53760,23182],"Tarrant":[309189,313497],"Taylor":[29811,10489],"Tom Green":[24648,9690],"Travis":[119278,359772],"Webb":[13814,35159],"Wichita":[23648,9971],"Williamson":[99857,105850],"Wise":[19023,3915]};
 // 2022 Governor by county: [Abbott, Beto O'Rourke]
-const GOV={"Bastrop":[16707,12007],"Bell":[51888,34785],"Bexar":[221993,311023],"Bowie":[20206,6060],"Brazoria":[64938,43364],"Brazos":[35768,23103],"Cameron":[34290,41667],"Collin":[198236,161737],"Coryell":[8757,7162],"Dallas":[203230,253997],"Denton":[149725,116428],"Ector":[14016,11939],"ElPaso":[67622,77340],"FortBend":[108629,147140],"Galveston":[36400,27745],"Harris":[691068,699358],"Hidalgo":[68625,45629],"Jefferson":[23473,43298],"Lubbock":[24372,20415],"McLennan":[24144,23900],"Montgomery":[62148,54029],"Nueces":[40206,28739],"Tarrant":[149955,153908],"Travis":[233361,104012],"Williamson":[78018,46887]};
+const GOV={"Bastrop":[16707,12007],"Bell":[51888,34785],"Bexar":[221993,311023],"Bowie":[20206,6060],"Brazoria":[64938,43364],"Brazos":[35768,23103],"Cameron":[34290,41667],"Collin":[198236,161737],"Comal":[54503,19195],"Dallas":[224684,392634],"Denton":[177017,136389],"Ector":[19212,5950],"El Paso":[57573,105156],"Ellis":[45564,21338],"Fort Bend":[117249,129116],"Galveston":[68822,40229],"Grayson":[34903,9563],"Gregg":[24223,8662],"Guadalupe":[36882,19356],"Harris":[490261,595653],"Hays":[39085,48970],"Henderson":[22909,4798],"Hidalgo":[56783,82671],"Hood":[22596,4301],"Hunt":[23744,6422],"Jefferson":[34988,26641],"Johnson":[42954,12266],"Kaufman":[28306,14024],"Lubbock":[58163,24497],"McLennan":[47875,23765],"Midland":[32389,7154],"Montgomery":[152694,52654],"Nueces":[47567,40474],"Parker":[52523,10123],"Randall":[39243,8228],"Rockwall":[30211,12132],"Smith":[56608,18763],"Tarrant":[303600,279423],"Taylor":[30030,8888],"Tom Green":[23873,7516],"Travis":[119321,334667],"Webb":[16409,27156],"Wichita":[23328,7824],"Williamson":[111488,110242],"Wise":[21979,3538]};
 const CFG={
   sen:{label:"U.S. Senate",yr:2018,rn:"Cruz",dn:"O'Rourke",r26:"Paxton",d26:"Talarico",total:4260553+4045632,sR:4260553,sD:4045632,D:SEN},
   gov:{label:"Governor",yr:2022,rn:"Abbott",dn:"Beto O'Rourke",r26:"Abbott",d26:"Hinojosa",total:4437099+3553656,sR:4437099,sD:3553656,D:GOV}
 };
 const VOTES={sen:{},gov:{}}; // county -> [Democrat, Republican], loaded from data.json
 const TURN={sen:1.10,gov:1.05}; // expected 2026 vote compared with the past election; set in data.json
-let K="sen",C=CFG.sen,D=C.D,NAMES=[],mode="r18";
+let K="sen",C=CFG.sen,D=C.D,NAMES=[],mode="r18",picked=false; // picked: true once you click a map button
+const GEO={};let SEL=null;
 const el=id=>document.getElementById(id);
-// safer baseline margin: return 0 if baseline missing or zero
-const m18 = n => {
-  const dd = D[n];
-  if (!dd || (dd[0] + dd[1]) === 0) return 0;
-  return (dd[1] - dd[0]) / (dd[0] + dd[1]) * 100;
-};
-const m26=n=>{const v=VOTES[K][n];return v&&v[0]+v[1]>0?(v[0]-v[1])/(v[0]+v[1])*100:null};
-const sw=n=>{const a=m26(n);return a==null?null:a-m18(n)};
+const m18=n=>D[n]?(D[n][1]-D[n][0])/(D[n][0]+D[n][1])*100:null;
+const norm=s=>String(s).toLowerCase().replace(/[^a-z]/g,""); // "De Witt" and "DeWitt" match
+let VIDX={};
+function hasVotes(){return Object.keys(VOTES[K]).some(n=>{const v=VOTES[K][n];return n!=="Statewide"&&v[0]+v[1]>0})}
+function reindex(){VIDX={};for(const n of Object.keys(VOTES[K]))if(n!=="Statewide")VIDX[norm(n)]=VOTES[K][n]}
+function rekey(o,tracked){const t={};for(const n of Object.keys(tracked))t[norm(n)]=n;const out={};for(const k of Object.keys(o))out[t[norm(k)]||k]=o[k];return out}
+const vOf=n=>VOTES[K][n]||VIDX[norm(n)];
+const m26=n=>{const v=vOf(n);return v&&v[0]+v[1]>0?(v[0]-v[1])/(v[0]+v[1])*100:null};
+const sw=n=>{const a=m26(n),b=m18(n);return a==null||b==null?null:a-b};
 const fm=x=>x==null?"–":(x>=0?"D+":"R+")+Math.abs(x).toFixed(1);
 function col(n){
-  if(!D[n])return "#c9ced6";
-  const x=mode==="r18"?m18(n):sw(n);
+  if(mode!=="r26"&&!D[n])return "#c9ced6";
+  const x=mode==="r18"?m18(n):mode==="r26"?m26(n):sw(n);
   if(x==null)return "#c9ced6";
-  const s=mode==="r18"?60:20;
+  const s=mode==="r18"?60:mode==="r26"?40:20;
   return d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/s))/2);
 }
 function show(n){
-  if(!D[n]){el("info").textContent=n+" County: not tracked yet.";return;}
-  const v=VOTES[K][n];
+  SEL=n;
+  if(!D[n]){const u=vOf(n);el("info").innerHTML=u?"<b>"+n+" County</b><br>2026: "+C.d26+" "+u[0].toLocaleString()+", "+C.r26+" "+u[1].toLocaleString()+" ("+fm(m26(n))+")<br>No past result loaded for this county yet.":n+" County: no data yet.";return;}
+  const v=vOf(n);
   el("info").innerHTML="<b>"+n+" County</b><br>"+C.yr+": "+C.rn+" "+D[n][0].toLocaleString()+", "+C.dn+" "+D[n][1].toLocaleString()+" ("+fm(m18(n))+")"+
     (v?"<br>2026: "+C.d26+" "+v[0].toLocaleString()+", "+C.r26+" "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")":"<br>2026: no votes entered yet");
 }
 function paint(){
-  d3.selectAll("#map path").attr("fill",f=>col(f.properties.NAME));
+  d3.selectAll("#map path").attr("fill",f=>mode==="vl"?(D[f.properties.NAME]?"#e3e7ec":"#c9ced6"):col(f.properties.NAME));
   el("bR").setAttribute("aria-pressed",mode==="r18");
   el("bS").setAttribute("aria-pressed",mode==="sw");
-  el("l1").textContent=mode==="r18"?"R+60":"R+20";
-  el("l2").textContent=mode==="r18"?"D+60":"D+20";
+  el("bV").setAttribute("aria-pressed",mode==="vl");
+  el("bT").setAttribute("aria-pressed",mode==="r26");
+  const sc={r18:60,sw:20,vl:30,r26:40}[mode];
+  el("l1").textContent="R+"+sc;el("l2").textContent="D+"+sc;
+  el("vcap").textContent=mode==="vl"?"Circle area = estimated votes left in each county. Color = current margin. Pale blue-grey circles have no votes counted yet.":"";
+  bubbles();
 }
 function table(){
-  el("rows").innerHTML=NAMES.map(n=>"<tr data-n=\""+n+"\"><td>"+n+"</td><td>"+fm(m18(n))+"</td><td>"+fm(m26(n))+"</td><td>"+fm(sw(n))+"</td></tr>").join("");
+  const have=new Set(NAMES.map(norm));
+  const extra=Object.keys(VOTES[K]).filter(n=>n!=="Statewide"&&!have.has(norm(n)));
+  const all=NAMES.concat(extra);
+  const size=n=>{const u=vOf(n);return u&&u[0]+u[1]>0?u[0]+u[1]:(D[n]?(D[n][0]+D[n][1])*1e-6:0)};
+  all.sort((a,b)=>size(b)-size(a));
+  el("rows").innerHTML=all.map(n=>{const u=vOf(n);return "<tr data-n=\""+n+"\"><td>"+n+"</td><td>"+(u?(u[0]+u[1]).toLocaleString():"–")+"</td><td>"+fm(m18(n))+"</td><td>"+fm(m26(n))+"</td><td>"+fm(sw(n))+"</td></tr>"}).join("");
   const tot=NAMES.reduce((s,n)=>s+D[n][0]+D[n][1],0);
   el("cov").textContent=NAMES.length+" tracked counties cast "+(tot/C.total*100).toFixed(1)+"% of the "+C.yr+" two-party vote.";
 }
 function setRace(k){
-  K=k;C=CFG[k];
-  // Build a union of the historical baseline and any counties present in data.json
-  const baseline = Object.assign({}, C.D || {});
-  const votesForRace = VOTES[K] || {};
-  Object.keys(votesForRace).forEach(n => {
-    if (!(n in baseline)) baseline[n] = [0, 0];
-  });
-  // Use the unioned baseline for display and calculations
-  D = baseline;
-  // Also update the CFG entry so other functions that read C.D see the union
-  C.D = D;
-  NAMES = Object.keys(D).sort((a, b) => (D[b][0] + D[b][1]) - (D[a][0] + D[a][1]));
-  el("h1").textContent = "Texas 2026: " + C.label;
-  el("sub").textContent = "County tracker: " + C.d26 + " (D) vs " + C.r26 + " (R), compared with " + C.yr + " (" + C.dn + " vs " + C.rn + ").";
-  el("bR").textContent = C.yr + " result"; el("bS").textContent = "Swing since " + C.yr;
-  el("hy").textContent = C.yr + " margin";
+  K=k;C=CFG[k];D=C.D;
+  NAMES=Object.keys(D).sort((a,b)=>(D[b][0]+D[b][1])-(D[a][0]+D[a][1]));
+  el("h1").textContent="Texas 2026: "+C.label;
+  el("sub").textContent="County tracker: "+C.d26+" (D) vs "+C.r26+" (R), compared with "+C.yr+" ("+C.dn+" vs "+C.rn+").";
+  el("bR").textContent=C.yr+" result";el("bS").textContent="Swing since "+C.yr;
+  el("hy").textContent=C.yr+" margin";
   el("tS").setAttribute("aria-pressed",k==="sen");el("tG").setAttribute("aria-pressed",k==="gov");
-  el("info").textContent="Click a county on the map or in the table.";
-  table();paint();needle();
+  SEL=null;el("info").textContent="Click a county on the map or in the table.";
+  reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();
+}
+function left(n){const v=VOTES[K][n],ev=(D[n][0]+D[n][1])*TURN[K],cv=v?v[0]+v[1]:0;return {ev,cv,left:Math.max(0,ev-cv)}}
+const bc=n=>{const x=m26(n);return x==null?"#9db2c8":d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/30))/2)};
+function bubbles(){
+  const svg=d3.select("#map");svg.selectAll("#bub").remove();
+  if(mode!=="vl"||!GEO.f)return;
+  const maxEv=Math.max(...NAMES.map(n=>left(n).ev)),g=svg.append("g").attr("id","bub");
+  const items=GEO.f.map(f=>({n:f.properties.NAME,c:GEO.path.centroid(f)})).filter(o=>D[o.n]).map(o=>({n:o.n,c:o.c,L:left(o.n).left})).filter(o=>o.L>0&&!isNaN(o.c[0])).sort((a,b)=>b.L-a.L);
+  for(const o of items)g.append("circle").attr("cx",o.c[0]).attr("cy",o.c[1]).attr("r",34*Math.sqrt(o.L/maxEv)).attr("fill",bc(o.n)).attr("fill-opacity",.75).attr("stroke","#556").attr("stroke-width",.5).on("click",()=>show(o.n));
+}
+function vlPanel(){
+  let ev=0,cv=0,lt=0,tR=0,tD=0,cD=0,cR=0;const top=[];
+  for(const n of NAMES){const o=left(n),v=VOTES[K][n];ev+=o.ev;cv+=Math.min(o.cv,o.ev);lt+=o.left;top.push([n,o.left]);tR+=D[n][0];tD+=D[n][1];if(v){cD+=v[0];cR+=v[1];}}
+  top.sort((a,b)=>b[1]-a[1]);
+  const f=x=>Math.round(x).toLocaleString("en-US"),restEv=(C.sR-tR+C.sD-tD)*TURN[K],st=VOTES[K].Statewide;
+  let restTxt="Rest of state: about "+f(restEv)+" expected. Add a \"Statewide\" line in data.json to count it.",restLeft=restEv;
+  if(st){
+    if(st[0]<cD||st[1]<cR)restTxt="Statewide totals are smaller than your county totals. Check the numbers.";
+    else{const rc=st[0]+st[1]-cD-cR;restLeft=Math.max(0,restEv-rc);restTxt="Rest of state: about "+f(rc)+" counted of about "+f(restEv)+" expected, so about "+f(restLeft)+" left.";}
+  }
+  el("vl").innerHTML="<h3>Estimated vote left</h3>"+
+    "<p>Tracked counties: "+f(cv)+" counted of about "+f(ev)+" expected, so about <b>"+f(lt)+"</b> left.</p>"+
+    "<p>"+restTxt+"</p><p>All together: about <b>"+f(lt+restLeft)+"</b> left.</p>"+
+    "<p>Most vote left: "+top.slice(0,5).filter(t=>t[1]>=0.5).map(t=>t[0]+" "+f(t[1])).join(", ")+"</p>"+
+    "<p class=\"note\">Expected vote is last time's total times the turnout number in data.json ("+TURN[K]+"). It is an estimate, not a count.</p>";
 }
 // Needle math: project the statewide margin from counted votes, county by county.
 function erf(x){const t=1/(1+0.3275911*Math.abs(x)),y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y}
@@ -130,6 +181,9 @@ function project(c,votes,T){
   rows.push({pv:rpv,m:(rD-rR)/rpv*100,ev:rpv*T,cv:0,s:null});
   let sw=0,sc=0,k=0,den=0,counted=0;
   for(const r of rows){den+=r.ev;counted+=Math.min(r.cv,r.ev);if(r.cv>0){sw+=r.cv*r.s;sc+=r.cv;k++;}}
+  const st=votes.Statewide; // optional statewide totals: counts the rest of state toward "counted" only
+  if(st){let cD=0,cR=0;for(const n of names){const v=votes[n];if(v){cD+=v[0];cR+=v[1];}}
+    if(st[0]>=cD&&st[1]>=cR)counted+=Math.min(st[0]+st[1]-cD-cR,rows[rows.length-1].ev);}
   if(!k)return null;
   const f=counted/den,S=(sw/sc)*Math.min(1,f/0.5); // counted swing counts fully once half the expected vote is in
   let num=0;
@@ -147,49 +201,85 @@ function needle(){
   const Y=m=>150-Math.max(-15,Math.min(15,m))*260/30,lo=p.M-1.2816*p.sd,hi=p.M+1.2816*p.sd,y=Y(p.M);
   const sg=x=>(x>=0?"D+":"R+")+Math.abs(x).toFixed(1),lead=p.M>=0?C.d26:C.r26;
   box.innerHTML="<svg class=\"gauge\" viewBox=\"0 0 110 300\" role=\"img\" aria-label=\"Projected margin gauge\">"+
-    "<defs><linearGradient id=\"gg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2166ac\"/><stop offset=\".5\" stop-color=\"#f7f7f7\"/><stop offset=\"1\" stop-color=\"#b2[...]
+    "<defs><linearGradient id=\"gg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2166ac\"/><stop offset=\".5\" stop-color=\"#f7f7f7\"/><stop offset=\"1\" stop-color=\"#b2182b\"/></linearGradient></defs>"+
     "<rect x=\"30\" y=\"20\" width=\"26\" height=\"260\" fill=\"url(#gg)\" opacity=\".6\"/>"+
     "<line x1=\"24\" x2=\"62\" y1=\"150\" y2=\"150\" stroke=\"currentColor\"/>"+
     "<rect x=\"30\" y=\""+Y(hi)+"\" width=\"26\" height=\""+(Y(lo)-Y(hi))+"\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/>"+
     "<polygon points=\"68,"+(y-8)+" 68,"+(y+8)+" 57,"+y+"\" fill=\"currentColor\"/>"+
-    "<text x=\"2\" y=\"16\" font-size=\"10\" fill=\"currentColor\">D+15</text><text x=\"2\" y=\"296\" font-size=\"10\" fill=\"currentColor\">R+15</text><text x=\"0\" y=\"154\" font-size=\"10\" fill=\"currentColor\">0</text>"+
+    "<text x=\"2\" y=\"16\" font-size=\"10\" fill=\"currentColor\">D+15</text><text x=\"2\" y=\"296\" font-size=\"10\" fill=\"currentColor\">R+15</text><text x=\"0\" y=\"154\" font-size=\"10\" fill=\"currentColor\">even</text></svg>"+
     "<div class=\"nt\"><div class=\"big\">"+lead+" +"+Math.abs(p.M).toFixed(1)+"</div>"+
     "<p>"+C.d26+" "+(p.chance*100).toFixed(0)+"% &middot; "+C.r26+" "+((1-p.chance)*100).toFixed(0)+"% chance to win</p>"+
     "<p>80% range: "+sg(lo)+" to "+sg(hi)+"</p>"+
     "<p>"+(p.f*100).toFixed(0)+"% of expected vote counted &middot; "+p.k+" counties reporting</p>"+
     "<p class=\"note\">Built from each county's swing since "+C.yr+", plus the rest of the state. Early-night numbers are rough.</p></div>";
 }
+// Early vote: [county, group, 2022 day-1 early ballots, 2018 day-1 early ballots (0 = none)]
+const EV=[["Bastrop","S",2689,0],["Bell","M",6861,8358],["Bexar","U",47168,45170],["Bowie","M",2321,0],["Brazoria","S",9930,15020],["Brazos","M",3837,5753],["Cameron","B",8691,9223],["Collin","S",25375,42511],["Comal","S",6373,8329],["Dallas","U",41502,81723],["Denton","S",22961,24694],["Ector","M",1794,0],["El Paso","B",11776,23449],["Ellis","S",5091,7297],["Fort Bend","S",21989,27132],["Galveston","S",10957,15836],["Grayson","M",3495,0],["Gregg","M",3730,0],["Guadalupe","S",4771,6049],["Harris","U",82050,115601],["Hays","S",8372,9661],["Henderson","S",2662,0],["Hidalgo","B",13740,19650],["Hood","S",2021,0],["Hunt","S",1938,0],["Jefferson","M",6497,10901],["Johnson","S",4135,5675],["Kaufman","S",2790,0],["Lubbock","M",7246,12661],["McLennan","M",6007,9550],["Midland","M",2486,0],["Montgomery","S",16164,20158],["Nueces","B",10117,12064],["Parker","S",4413,6140],["Randall","M",4213,6190],["Rockwall","S",3264,0],["Smith","M",6376,4963],["Tarrant","U",40671,62971],["Taylor","M",3388,0],["Tom Green","M",2749,0],["Travis","U",35114,47405],["Webb","B",3500,4140],["Wichita","M",2875,0],["Williamson","S",19515,23496],["Wise","S",2147,0]];
+const GN={U:"Big urban",S:"Suburban/exurban",M:"Small metro/rural",B:"Border/Hispanic-heavy"};
+let EARLY={day:0,counties:{}},eyr=2022;
+function ebar(r){const d=r-1,w=Math.min(Math.abs(d)/0.5,1)*50;return d>=0?"<i style=\"left:50%;width:"+w+"%;background:#2166ac\"></i>":"<i style=\"left:"+(50-w)+"%;width:"+w+"%;background:#b7791f\"></i>"}
+function renderEarly(){
+  const cnt=EARLY.counties||{},idx={};
+  for(const k of Object.keys(cnt))idx[norm(k)]=cnt[k];
+  const day1=EARLY.day===1,agg={};let tn=0,tb=0,kc=0;
+  el("eh").textContent=eyr;
+  el("eRows").innerHTML=EV.map(c=>{
+    const b=eyr===2022?c[2]:c[3],n=idx[norm(c[0])],ok=day1&&n>0&&b>0;
+    if(ok){const a=agg[c[1]]||(agg[c[1]]={n:0,b:0,k:0});a.n+=n;a.b+=b;a.k++;tn+=n;tb+=b;kc++}
+    return "<tr><td>"+c[0]+"</td><td>"+GN[c[1]]+"</td><td>"+(b?b.toLocaleString():"–")+"</td><td>"+(n>0?n.toLocaleString():"–")+"</td><td>"+(ok?(n/b).toFixed(2):"")+"</td></tr>"}).join("");
+  el("eInfo").textContent=EARLY.through?"Early ballots cast through close of business "+EARLY.through+" (day "+EARLY.day+").":"";
+  let h="";
+  if(!Object.keys(cnt).length)h="<p class=\"note\">No 2026 early-vote numbers yet. Day 1 totals post after close of business on Oct 19.</p>";
+  else if(!day1)h="<p class=\"note\">These are day "+EARLY.day+" totals. Benchmarks for that day are not loaded yet, so ratios are not shown.</p>";
+  else{
+    const row=(l,s,r)=>"<div class=\"g\"><div>"+l+"<small>"+s+"</small></div><div class=\"ebar\">"+ebar(r)+"</div><b>"+r.toFixed(2)+"</b></div>";
+    h=row("All counties entered",kc+" counties",tn/tb);
+    for(const g of Object.keys(GN))if(agg[g])h+=row(GN[g],agg[g].k+" counties",agg[g].n/agg[g].b);
+  }
+  el("eSum").innerHTML=h;
+}
+function tab(k){el("raceView").hidden=false;el("earlyView").hidden=true;el("tE").setAttribute("aria-pressed",false);setRace(k)}
+el("tE").onclick=()=>{el("raceView").hidden=true;el("earlyView").hidden=false;el("tS").setAttribute("aria-pressed",false);el("tG").setAttribute("aria-pressed",false);el("tE").setAttribute("aria-pressed",true);renderEarly()};
+for(const [y,id] of [[2022,"e22"],[2018,"e18"]])el(id).onclick=()=>{eyr=y;el("e22").setAttribute("aria-pressed",y===2022);el("e18").setAttribute("aria-pressed",y===2018);renderEarly()};
 el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr)show(tr.dataset.n)};
-el("bR").onclick=()=>{mode="r18";paint()};
-el("bS").onclick=()=>{mode="sw";paint()};
-el("tS").onclick=()=>setRace("sen");
-el("tG").onclick=()=>setRace("gov");
+el("bR").onclick=()=>{picked=true;mode="r18";paint()};
+el("bS").onclick=()=>{picked=true;mode="sw";paint()};
+el("bV").onclick=()=>{picked=true;mode="vl";paint()};
+el("bT").onclick=()=>{picked=true;mode="r26";paint()};
+el("tS").onclick=()=>tab("sen");
+el("tG").onclick=()=>tab("gov");
 
 setRace("sen");
-fetch("data.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
-  VOTES.sen=j.senate||{};VOTES.gov=j.governor||{};
+function statusText(j){
+  const s=j.status||{};let t="";
+  if(s.mode==="rehearsal")t+="REHEARSAL: March primary data, not the real race. ";
+  if(s.manual)t+="Numbers entered by hand. ";
+  else if(s.checked)t+="Results from civicAPI, checked "+s.checked+(s.ok?"":" (problem: "+(s.note||"unknown")+"; showing the last good numbers)")+". ";
+  if(j.updated)t+="Votes last changed "+j.updated+".";
+  return t;
+}
+function loadVotes(){return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(j=>{
+  VOTES.sen=rekey(j.senate||{},SEN);VOTES.gov=rekey(j.governor||{},GOV);
+  EARLY=j.early||{day:0,counties:{}};
   if(j.turnout){TURN.sen=j.turnout.senate||TURN.sen;TURN.gov=j.turnout.governor||TURN.gov;}
-  if(j.updated)el("upd").textContent="Updated "+j.updated+".";
-}).catch(()=>{}).finally(()=>{
+  el("upd").textContent=statusText(j);
+}).catch(()=>{})}
+function refresh(){reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();if(SEL)show(SEL);if(!el("earlyView").hidden)renderEarly()}
+loadVotes().finally(()=>{
   setRace(K);
-  fetch("https://raw.githubusercontent.com/Cincome/tx.geojson/master/counties/tx_counties.geojson")
-    .then(r => r.json())
-    .then(g => {
-      const tx = (g.features || []).filter(f => {
-        const state = String(f && f.properties && f.properties.STATE || f.properties && f.properties.state || "");
-        const id = String(f && f.id || "");
-        return state === "48" || id.startsWith("48");
-      });
-      const proj = d3.geoMercator().fitSize([600,560], {type:"FeatureCollection", features:tx});
-      d3.select("#map").selectAll("path").data(tx).join("path").attr("d", d3.geoPath(proj))
-        .on("click", (e,f) => show(f.properties.NAME));
-      el("msg").textContent = "";
-      paint();
-    })
-    .catch(()=>{
-      el("msg").textContent="The map could not load. The table below still works.";
-    });
+  fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json").then(r=>r.json()).then(g=>{
+    const tx=g.features.filter(f=>(f.properties&&f.properties.STATE==="48")||String(f.id).startsWith("48"));
+    const proj=d3.geoMercator().fitSize([600,560],{type:"FeatureCollection",features:tx});
+    d3.select("#map").selectAll("path").data(tx).join("path").attr("d",GEO.path=d3.geoPath(proj))
+      .on("click",(e,f)=>show(f.properties.NAME));
+    GEO.f=tx;
+    el("msg").textContent="";
+    paint();
+  }).catch(()=>{
+    el("msg").textContent="The map could not load. The table below still works.";
+  });
 });
+setInterval(()=>loadVotes().then(refresh),60000); // reload data.json every minute
 </script>
 </body>
 </html>

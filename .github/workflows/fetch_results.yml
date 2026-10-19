@@ -17,9 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
+          fetch-dept: 0
+
+      - uses: actions/setup-python@v5
           python-version: "3.12"
+          
       - name: Fetch results from civicAPI
         run: python fetch_results.py
       - name: save data.json if it changed

@@ -4,6 +4,10 @@
 Runs on a schedule in GitHub Actions. Uses only the Python standard library.
 Which races to fetch is set by scripts/mode.txt ("live", "rehearsal", or "historic").
 Each county is stored as [Democrat votes, Republican votes].
+
+This version will merge partial county results from civicAPI into an existing
+baseline in data.json so the output always contains entries for all counties
+(where possible) instead of rejecting partial fetches outright.
 """
 import datetime
 import json
@@ -78,8 +82,10 @@ def pick(cands, spec):
     return max(found, key=lambda c: c.get("votes") or 0) if found else None
 
 
-def convert(race, dspec, rspec):
-    """Turn one civicAPI race into ({county: [D, R]}, [D, R]) or None if it looks wrong."""
+def extract_counties(race, dspec, rspec):
+    """Extract county vote pairs from a civicAPI race JSON without enforcing the
+    "complete" threshold. Returns (counties_dict, top_level_statewide_or_None).
+    counties_dict maps county name -> [D_votes, R_votes]."""
     regions = race.get("region_results") or {}
     counties = {}
     for region in regions.values():
@@ -87,16 +93,42 @@ def convert(race, dspec, rspec):
             continue
         d = pick(region.get("candidates", []), dspec)
         r = pick(region.get("candidates", []), rspec)
-        counties[region["name"]] = [int((d or {}).get("votes") or 0), int((r or {}).get("votes") or 0)]
+        counties[region.get("name")] = [int((d or {}).get("votes") or 0), int((r or {}).get("votes") or 0)]
+    # Try to get a top-level statewide total if present
+    d = pick(race.get("candidates", []) or [], dspec)
+    r = pick(race.get("candidates", []) or [], rspec)
+    top = None
+    if d is not None and r is not None:
+        top = [int(d.get("votes") or 0), int(r.get("votes") or 0)]
+    return counties, top
+
+
+def convert(race, dspec, rspec):
+    """Original strict convert: used to enforce completeness. Kept for logging.
+    Returns counties,statewide or None if strictly rejected (used only by older flow).
+    """
+    counties, top = extract_counties(race, dspec, rspec)
     if len(counties) < 200:
         print("only", len(counties), "counties found; ignoring this fetch")
         return None
-    d = pick(race.get("candidates", []), dspec)
-    r = pick(race.get("candidates", []), rspec)
-    if d is None or r is None:
+    if top is None:
         print("could not find both candidates at the top level; ignoring this fetch")
         return None
-    return counties, [int(d.get("votes") or 0), int(r.get("votes") or 0)]
+    return counties, top
+
+
+def merge_with_baseline(new_counties, baseline_counties):
+    """Merge new_counties into baseline_counties: baseline provides default for
+    missing counties; new_counties override baseline values where present."""
+    merged = dict(baseline_counties) if baseline_counties else {}
+    merged.update(new_counties)
+    return merged
+
+
+def compute_statewide_from_counties(counties):
+    d_sum = sum(v[0] for v in counties.values())
+    r_sum = sum(v[1] for v in counties.values())
+    return [d_sum, r_sum]
 
 
 def main(root=None):
@@ -124,15 +156,35 @@ def main(root=None):
             race = fetch(race_spec)
         if not race:
             continue
-        result = convert(race, dspec, rspec)
-        if not result:
+
+        # Extract whatever counties the race provides (even if partial)
+        new_counties, top_statewide = extract_counties(race, dspec, rspec)
+
+        # If the fetch produced few counties, merge with the existing baseline in data.json
+        if len(new_counties) < 200:
+            print("partial fetch: only", len(new_counties), "counties; merging with baseline")
+            baseline = data.get(key) or {}
+            baseline_counties = {k: v for k, v in baseline.items() if k != "Statewide"}
+            merged = merge_with_baseline(new_counties, baseline_counties)
+            counties = merged
+            # Prefer the race top-level statewide if present, otherwise compute from merged counties
+            statewide = top_statewide if top_statewide is not None else compute_statewide_from_counties(merged)
+        else:
+            # Full fetch — use the race counties and the top-level statewide totals
+            counties = new_counties
+            statewide = top_statewide if top_statewide is not None else compute_statewide_from_counties(counties)
+
+        # Extra sanity: ensure we have at least some counties before accepting
+        if not counties:
+            print("no counties found; ignoring this fetch")
             continue
-        counties, statewide = result
+
         old = (data.get(key) or {}).get("Statewide")
         # In live mode, never let the total move backwards by more than 2%.
         if mode == "live" and old and sum(statewide) < 0.98 * sum(old):
             print(key, "new statewide total is smaller than before; keeping the old numbers")
             continue
+
         new = dict(counties)
         new["Statewide"] = statewide
         data[key] = new

@@ -46,14 +46,14 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 <div class="tbl"><table>
 <thead><tr><th>County</th><th id="hy">Past margin</th><th>2026 margin</th><th>Swing</th></tr></thead>
 <tbody id="rows"></tbody></table></div>
-<p class="note">Margin is the Democrat's lead or deficit in points among the two main candidates. Swing is the change in that margin since the past election, positive meaning a shift toward Democr[...] 
+<p class="note">Margin is the Democrat's lead or deficit in points among the two main candidates. Swing is the change in that margin since the past election, positive meaning a shift toward Democrat-margins.</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
 // 2018 Senate by county: [Cruz, O'Rourke]
-const SEN={"Bastrop":[15049,12082],"Bell":[47437,38417],"Bexar":[217600,326946],"Bowie":[20157,7982],"Brazoria":[65693,45228],"Brazos":[35971,27876],"Cameron":[28574,48770],"Collin":[187425,165614[...]}
+const SEN={"Bastrop":[15049,12082],"Bell":[47437,38417],"Bexar":[217600,326946],"Bowie":[20157,7982],"Brazoria":[65693,45228],"Brazos":[35971,27876],"Cameron":[28574,48770],"Collin":[187425,165614],"Coryell":[7422,4856],"Dallas":[198293,274916],"Denton":[124238,103791],"Ector":[12838,10632],"ElPaso":[74535,57208],"FortBend":[105027,133586],"Galveston":[33108,21285],"Harris":[624912,619666],"Hidalgo":[56810,32268],"Jefferson":[23993,37497],"Lubbock":[23418,19470],"McLennan":[21819,21053],"Montgomery":[58247,51685],"Nueces":[38954,28299],"Tarrant":[119872,139337],"Travis":[161452,82568],"Williamson":[61207,36163]};
 // 2022 Governor by county: [Abbott, Beto O'Rourke]
-const GOV={"Bastrop":[16707,12007],"Bell":[51888,34785],"Bexar":[221993,311023],"Bowie":[20206,6060],"Brazoria":[64938,43364],"Brazos":[35768,23103],"Cameron":[34290,41667],"Collin":[198236,161737[...]}
+const GOV={"Bastrop":[16707,12007],"Bell":[51888,34785],"Bexar":[221993,311023],"Bowie":[20206,6060],"Brazoria":[64938,43364],"Brazos":[35768,23103],"Cameron":[34290,41667],"Collin":[198236,161737],"Coryell":[8757,7162],"Dallas":[203230,253997],"Denton":[149725,116428],"Ector":[14016,11939],"ElPaso":[67622,77340],"FortBend":[108629,147140],"Galveston":[36400,27745],"Harris":[691068,699358],"Hidalgo":[68625,45629],"Jefferson":[23473,43298],"Lubbock":[24372,20415],"McLennan":[24144,23900],"Montgomery":[62148,54029],"Nueces":[40206,28739],"Tarrant":[149955,153908],"Travis":[233361,104012],"Williamson":[78018,46887]};
 const CFG={
   sen:{label:"U.S. Senate",yr:2018,rn:"Cruz",dn:"O'Rourke",r26:"Paxton",d26:"Talarico",total:4260553+4045632,sR:4260553,sD:4045632,D:SEN},
   gov:{label:"Governor",yr:2022,rn:"Abbott",dn:"Beto O'Rourke",r26:"Abbott",d26:"Hinojosa",total:4437099+3553656,sR:4437099,sD:3553656,D:GOV}
@@ -62,7 +62,12 @@ const VOTES={sen:{},gov:{}}; // county -> [Democrat, Republican], loaded from da
 const TURN={sen:1.10,gov:1.05}; // expected 2026 vote compared with the past election; set in data.json
 let K="sen",C=CFG.sen,D=C.D,NAMES=[],mode="r18";
 const el=id=>document.getElementById(id);
-const m18=n=>(D[n][1]-D[n][0])/(D[n][0]+D[n][1])*100;
+// safer baseline margin: return 0 if baseline missing or zero
+const m18 = n => {
+  const dd = D[n];
+  if (!dd || (dd[0] + dd[1]) === 0) return 0;
+  return (dd[1] - dd[0]) / (dd[0] + dd[1]) * 100;
+};
 const m26=n=>{const v=VOTES[K][n];return v&&v[0]+v[1]>0?(v[0]-v[1])/(v[0]+v[1])*100:null};
 const sw=n=>{const a=m26(n);return a==null?null:a-m18(n)};
 const fm=x=>x==null?"–":(x>=0?"D+":"R+")+Math.abs(x).toFixed(1);
@@ -92,12 +97,22 @@ function table(){
   el("cov").textContent=NAMES.length+" tracked counties cast "+(tot/C.total*100).toFixed(1)+"% of the "+C.yr+" two-party vote.";
 }
 function setRace(k){
-  K=k;C=CFG[k];D=C.D;
-  NAMES=Object.keys(D).sort((a,b)=>(D[b][0]+D[b][1])-(D[a][0]+D[a][1]));
-  el("h1").textContent="Texas 2026: "+C.label;
-  el("sub").textContent="County tracker: "+C.d26+" (D) vs "+C.r26+" (R), compared with "+C.yr+" ("+C.dn+" vs "+C.rn+").";
-  el("bR").textContent=C.yr+" result";el("bS").textContent="Swing since "+C.yr;
-  el("hy").textContent=C.yr+" margin";
+  K=k;C=CFG[k];
+  // Build a union of the historical baseline and any counties present in data.json
+  const baseline = Object.assign({}, C.D || {});
+  const votesForRace = VOTES[K] || {};
+  Object.keys(votesForRace).forEach(n => {
+    if (!(n in baseline)) baseline[n] = [0, 0];
+  });
+  // Use the unioned baseline for display and calculations
+  D = baseline;
+  // Also update the CFG entry so other functions that read C.D see the union
+  C.D = D;
+  NAMES = Object.keys(D).sort((a, b) => (D[b][0] + D[b][1]) - (D[a][0] + D[a][1]));
+  el("h1").textContent = "Texas 2026: " + C.label;
+  el("sub").textContent = "County tracker: " + C.d26 + " (D) vs " + C.r26 + " (R), compared with " + C.yr + " (" + C.dn + " vs " + C.rn + ").";
+  el("bR").textContent = C.yr + " result"; el("bS").textContent = "Swing since " + C.yr;
+  el("hy").textContent = C.yr + " margin";
   el("tS").setAttribute("aria-pressed",k==="sen");el("tG").setAttribute("aria-pressed",k==="gov");
   el("info").textContent="Click a county on the map or in the table.";
   table();paint();needle();
@@ -132,12 +147,12 @@ function needle(){
   const Y=m=>150-Math.max(-15,Math.min(15,m))*260/30,lo=p.M-1.2816*p.sd,hi=p.M+1.2816*p.sd,y=Y(p.M);
   const sg=x=>(x>=0?"D+":"R+")+Math.abs(x).toFixed(1),lead=p.M>=0?C.d26:C.r26;
   box.innerHTML="<svg class=\"gauge\" viewBox=\"0 0 110 300\" role=\"img\" aria-label=\"Projected margin gauge\">"+
-    "<defs><linearGradient id=\"gg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2166ac\"/><stop offset=\".5\" stop-color=\"#f7f7f7\"/><stop offset=\"1\" stop-color=\"#b2[...]"+
+    "<defs><linearGradient id=\"gg\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#2166ac\"/><stop offset=\".5\" stop-color=\"#f7f7f7\"/><stop offset=\"1\" stop-color=\"#b2[...]
     "<rect x=\"30\" y=\"20\" width=\"26\" height=\"260\" fill=\"url(#gg)\" opacity=\".6\"/>"+
     "<line x1=\"24\" x2=\"62\" y1=\"150\" y2=\"150\" stroke=\"currentColor\"/>"+
     "<rect x=\"30\" y=\""+Y(hi)+"\" width=\"26\" height=\""+(Y(lo)-Y(hi))+"\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/>"+
     "<polygon points=\"68,"+(y-8)+" 68,"+(y+8)+" 57,"+y+"\" fill=\"currentColor\"/>"+
-    "<text x=\"2\" y=\"16\" font-size=\"10\" fill=\"currentColor\">D+15</text><text x=\"2\" y=\"296\" font-size=\"10\" fill=\"currentColor\">R+15</text><text x=\"0\" y=\"154\" font-size=\"10\" fi[...]"+
+    "<text x=\"2\" y=\"16\" font-size=\"10\" fill=\"currentColor\">D+15</text><text x=\"2\" y=\"296\" font-size=\"10\" fill=\"currentColor\">R+15</text><text x=\"0\" y=\"154\" font-size=\"10\" fill=\"currentColor\">0</text>"+
     "<div class=\"nt\"><div class=\"big\">"+lead+" +"+Math.abs(p.M).toFixed(1)+"</div>"+
     "<p>"+C.d26+" "+(p.chance*100).toFixed(0)+"% &middot; "+C.r26+" "+((1-p.chance)*100).toFixed(0)+"% chance to win</p>"+
     "<p>80% range: "+sg(lo)+" to "+sg(hi)+"</p>"+
@@ -157,16 +172,23 @@ fetch("data.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
   if(j.updated)el("upd").textContent="Updated "+j.updated+".";
 }).catch(()=>{}).finally(()=>{
   setRace(K);
-  fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json").then(r=>r.json()).then(g=>{
-    const tx=g.features.filter(f=>(f.properties&&f.properties.STATE==="48")||String(f.id).startsWith("48"));
-    const proj=d3.geoMercator().fitSize([600,560],{type:"FeatureCollection",features:tx});
-    d3.select("#map").selectAll("path").data(tx).join("path").attr("d",d3.geoPath(proj))
-      .on("click",(e,f)=>show(f.properties.NAME));
-    el("msg").textContent="";
-    paint();
-  }).catch(()=>{
-    el("msg").textContent="The map could not load. The table below still works.";
-  });
+  fetch("https://raw.githubusercontent.com/Cincome/tx.geojson/master/counties/tx_counties.geojson")
+    .then(r => r.json())
+    .then(g => {
+      const tx = (g.features || []).filter(f => {
+        const state = String(f && f.properties && f.properties.STATE || f.properties && f.properties.state || "");
+        const id = String(f && f.id || "");
+        return state === "48" || id.startsWith("48");
+      });
+      const proj = d3.geoMercator().fitSize([600,560], {type:"FeatureCollection", features:tx});
+      d3.select("#map").selectAll("path").data(tx).join("path").attr("d", d3.geoPath(proj))
+        .on("click", (e,f) => show(f.properties.NAME));
+      el("msg").textContent = "";
+      paint();
+    })
+    .catch(()=>{
+      el("msg").textContent="The map could not load. The table below still works.";
+    });
 });
 </script>
 </body>

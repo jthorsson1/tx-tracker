@@ -70,7 +70,7 @@ def convert(race, dspec, rspec):
 
 
 def main(root=None):
-    root = pathlib.Path(root) if root else pathlib.Path(__file__).resolve().parent.parent
+    root = pathlib.Path(root) if root else pathlib.Path(__file__).resolve().parent
     data_file = root / "data.json"
     mode_file = root / "scripts" / "mode.txt"
     mode = mode_file.read_text().strip() if mode_file.exists() else "live"

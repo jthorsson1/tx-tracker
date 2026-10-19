@@ -35,3 +35,5 @@ jobs:
             git commit -m "Update results"
             git pull --rebase origin main
             git push origin HEAD:main
+          fi
+        shell: bash 

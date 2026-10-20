@@ -178,11 +178,10 @@ function project(c,votes,T){
   const rows=names.map(n=>{const pr=D[n][0],pd=D[n][1],pv=pr+pd,m=(pd-pr)/pv*100,v=votes[n],cv=v?v[0]+v[1]:0;
     return {pv,m,ev:pv*T,cv,s:cv>0?(v[0]-v[1])/cv*100-m:null}});
   const rR=c.sR-tR,rD=c.sD-tD,rpv=rR+rD;
-  rows.push({pv:rpv,m:(rD-rR)/rpv*100,ev:rpv*T,cv:0,s:null});
-  let sw=0,sc=0,k=0,den=0,counted=0;
+  if(rpv>0)rows.push({pv:rpv,m:(rD-rR)/rpv*100,ev:rpv*T,cv:0,s:null});  let sw=0,sc=0,k=0,den=0,counted=0;
   for(const r of rows){den+=r.ev;counted+=Math.min(r.cv,r.ev);if(r.cv>0){sw+=r.cv*r.s;sc+=r.cv;k++;}}
   const st=votes.Statewide; // optional statewide totals: counts the rest of state toward "counted" only
-  if(st){let cD=0,cR=0;for(const n of names){const v=votes[n];if(v){cD+=v[0];cR+=v[1];}}
+  if(st&&rpv>0){let cD=0,cR=0;for(const n of names){const v=votes[n];if(v){cD+=v[0];cR+=v[1];}}
     if(st[0]>=cD&&st[1]>=cR)counted+=Math.min(st[0]+st[1]-cD-cR,rows[rows.length-1].ev);}
   if(!k)return null;
   const f=counted/den,S=(sw/sc)*Math.min(1,f/0.5); // counted swing counts fully once half the expected vote is in

@@ -36,7 +36,7 @@ jobs:
       - name: Collect site files
         run: |
           mkdir site
-          cp index.html data.json site/
+          cp index.html data.json tx-counties.json site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

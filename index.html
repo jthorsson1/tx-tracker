@@ -194,7 +194,7 @@ function project(c,votes,T){
   const M=num/den,sd=k<3?SD0:Math.max(SDMIN,SD0*Math.sqrt(1-f));
   return {M,sd,f,k,chance:cdf(M/sd)};
 }
-function needle(){
+function needle(){scoreboard();
   const box=el("ndl"),p=project(C,VOTES[K],TURN[K]);
   if(!p){box.innerHTML="<p class=\"note\">No votes counted yet. The gauge appears once county results are entered.</p>";return}
   const Y=m=>150-Math.max(-15,Math.min(15,m))*260/30,lo=p.M-1.2816*p.sd,hi=p.M+1.2816*p.sd,y=Y(p.M);

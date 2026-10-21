@@ -48,7 +48,7 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 <div class="seg"><button id="tS" aria-pressed="true">Senate</button><button id="tG" aria-pressed="false">Governor</button><button id="tE" aria-pressed="false">Early vote</button></div>
 <div id="raceView">
 <div class="seg"><button id="bR" aria-pressed="true">Past result</button><button id="bT" aria-pressed="false">2026 result</button><button id="bS" aria-pressed="false">Swing</button><button id="bV" aria-pressed="false">Vote left</button></div>
-<div class="needle" id="ndl"></div>
+  <div id="sb" style="display:none;margin:0 0 20px;padding:12px;background:var(--panel);border:1px solid var(--line)"></div><div class="needle" id="ndl"></div>
 <div id="vl"></div>
 <svg id="map" viewBox="0 0 600 560" role="img" aria-label="Map of Texas counties"></svg>
 <div id="msg">Loading map...</div>
@@ -194,7 +194,22 @@ function project(c,votes,T){
   const M=num/den,sd=k<3?SD0:Math.max(SDMIN,SD0*Math.sqrt(1-f));
   return {M,sd,f,k,chance:cdf(M/sd)};
 }
-function needle(){scoreboard();
+// Scoreboard: counted votes and projected two-party share
+function scoreboard(){
+  const box=el("sb"),V=VOTES[K];
+  let cd=0,cr=0;
+  for(const n of Object.keys(V)){if(n==="Statewide")continue;cd+=V[n][0];cr+=V[n][1];}
+  const st=V.Statewide;
+  if(st&&st[0]>=cd&&st[1]>=cr){cd=st[0];cr=st[1];}
+  if(cd+cr===0){box.style.display="none";return}
+  box.style.display="block";
+  const f=x=>Math.round(x).toLocaleString("en-US"),pc=x=>x.toFixed(1)+"%",p=project(C,V,TURN[K]);
+  let h="<b>Counted so far</b><br>"+C.d26+": "+f(cd)+" ("+pc(cd/(cd+cr)*100)+")<br>"+C.r26+": "+f(cr)+" ("+pc(cr/(cd+cr)*100)+")";
+  if(p){const dS=50+p.M/2,w=1.2816*p.sd/2;
+    h+="<br><br><b>Projected final share</b><br>"+C.d26+": "+pc(dS)+" &middot; "+C.r26+": "+pc(100-dS)+"<br>80% range for "+C.d26+": "+pc(dS-w)+" to "+pc(dS+w);}
+  h+="<br><span class=\"note\">Two-party only. Third-party votes are not included, so real percentages will be a bit lower for both.</span>";
+  box.innerHTML=h;
+}function needle(){scoreboard();
   const box=el("ndl"),p=project(C,VOTES[K],TURN[K]);
   if(!p){box.innerHTML="<p class=\"note\">No votes counted yet. The gauge appears once county results are entered.</p>";return}
   const Y=m=>150-Math.max(-15,Math.min(15,m))*260/30,lo=p.M-1.2816*p.sd,hi=p.M+1.2816*p.sd,y=Y(p.M);

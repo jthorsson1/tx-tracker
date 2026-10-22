@@ -1,7 +1,7 @@
 {
   "mode": "rehearsal",
   "manual": false,
-  "turnout": { "senate": 1.10, "governor": 1.05 },
+  "turnout": { "senate": 1.17, "governor": 1.21 },
   "early": { "day": 0, "through": "", "counties": {} },
   "updated": "",
   "senate": {},

@@ -268,7 +268,21 @@ function renderEarly(){
   function tab(k){el("raceView").hidden=false;el("earlyView").hidden=true;el("tE").setAttribute("aria-pressed",false);setRace(k)}
 el("tE").onclick=()=>{el("raceView").hidden=true;el("earlyView").hidden=false;el("tS").setAttribute("aria-pressed",false);el("tG").setAttribute("aria-pressed",false);el("tE").setAttribute("aria-pressed",true);renderEarly()};
 for(const [y,id] of [[2022,"e22"],[2018,"e18"]])el(id).onclick=()=>{eyr=y;el("e22").setAttribute("aria-pressed",y===2022);el("e18").setAttribute("aria-pressed",y===2018);renderEarly()};
-el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr)show(tr.dataset.n)};
+  el("eRows").oninput=e=>{
+  const i=e.target;
+  if(!EDITM||!i.dataset||!i.dataset.c)return;
+  const v=parseInt(i.value.replace(/[^0-9]/g,""),10)||0;
+  if(v>0)EDIT[i.dataset.c]=v;else delete EDIT[i.dataset.c];
+  const c=EV.find(x=>x[0]===i.dataset.c),b=eyr===2022?c[2]:c[3];
+  i.closest("tr").querySelector(".pc").textContent=pct(v,b);
+  earlySum(EDIT)};
+el("eCopy").onclick=()=>{
+  const cnt=ecount(),names=EV.map(c=>c[0]).filter(n=>cnt[n]>0);
+  const line="\"early\": { \"day\": 0, \"through\": \""+el("eThru").value.replace(/"/g,"")+"\", \"counties\": { "+names.map(n=>"\""+n+"\": "+cnt[n]).join(", ")+" } },";
+  const done=()=>{el("eMsg").textContent="Copied "+names.length+" counties."};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(line).then(done,()=>window.prompt("Copy this line:",line));
+  else window.prompt("Copy this line:",line)};
+  el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr)show(tr.dataset.n)};
 el("bR").onclick=()=>{picked=true;mode="r18";paint()};
 el("bS").onclick=()=>{picked=true;mode="sw";paint()};
 el("bV").onclick=()=>{picked=true;mode="vl";paint()};

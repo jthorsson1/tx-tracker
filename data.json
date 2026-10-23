@@ -2,7 +2,7 @@
   "mode": "rehearsal",
   "manual": false,
   "turnout": { "senate": 1.17, "governor": 1.21 },
-  "early": { "day": 0, "through": "", "counties": {} },
+ "early": { "day": 0, "through": "Oct 22", "counties": { "Jefferson": 23869 } },
   "updated": "",
   "senate": {},
   "governor": {}

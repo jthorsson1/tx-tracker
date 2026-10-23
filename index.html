@@ -143,17 +143,25 @@ function paint(){
   el("vcap").textContent=mode==="vl"?"Circle area = estimated votes left in each county. Color = current margin. Pale blue-grey circles have no votes counted yet.":"";
   bubbles();
 }
+let SHOWALL=false;
 function table(){
   const have=new Set(NAMES.map(norm));
   const extra=Object.keys(VOTES[K]).filter(n=>n!=="Statewide"&&!have.has(norm(n)));
   const all=NAMES.concat(extra);
   const size=n=>{const u=vOf(n);return u&&u[0]+u[1]>0?u[0]+u[1]:(D[n]?(D[n][0]+D[n][1])*1e-6:0)};
   all.sort((a,b)=>size(b)-size(a));
-  el("rows").innerHTML=all.map(n=>{const u=vOf(n);return "<tr data-n=\""+n+"\"><td>"+n+"</td><td>"+(u?(u[0]+u[1]).toLocaleString():"–")+"</td><td>"+fm(m18(n))+"</td><td>"+fm(m26(n))+"</td><td>"+fm(sw(n))+"</td></tr>"}).join("");
+  const q=norm(el("q").value),g=el("grp").value,gm={};
+  for(const c of EV)gm[norm(c[0])]=c[1];
+  const hit=all.filter(n=>(!q||norm(n).includes(q))&&(!g||gm[norm(n)]===g));
+  const filt=q||g,shown=filt||SHOWALL?hit:hit.slice(0,20);
+  el("rows").innerHTML=shown.map(n=>{const u=vOf(n);return "<tr data-n=\""+n+"\"><td>"+n+"</td><td>"+(u?(u[0]+u[1]).toLocaleString():"–")+"</td><td>"+fm(m18(n))+"</td><td>"+fm(m26(n))+"</td><td>"+fm(sw(n))+"</td></tr>"}).join("");
+  el("tcount").textContent=filt?(hit.length?hit.length+" of "+all.length+" counties match":"No county matches")+(g?" (groups cover only the 45 tracked counties)":""):"Showing "+shown.length+" of "+all.length+" counties";
+  el("tmore").hidden=!!filt||all.length<=20;
+  el("tmore").textContent=SHOWALL?"Show top 20 only":"Show all "+all.length+" counties";
   const tot=NAMES.reduce((s,n)=>s+D[n][0]+D[n][1],0);
   el("cov").textContent=NAMES.length+" tracked counties cast "+(tot/C.total*100).toFixed(1)+"% of the "+C.yr+" two-party vote.";
 }
-function setRace(k){
+  function setRace(k){
   K=k;C=CFG[k];D=C.D;
   NAMES=Object.keys(D).sort((a,b)=>(D[b][0]+D[b][1])-(D[a][0]+D[a][1]));
   el("h1").textContent="Texas 2026: "+C.label;
@@ -309,7 +317,10 @@ el("bV").onclick=()=>{picked=true;mode="vl";paint()};
 el("bT").onclick=()=>{picked=true;mode="r26";paint()};
 el("tS").onclick=()=>tab("sen");
 el("tG").onclick=()=>tab("gov");
-
+el("q").oninput=table;
+el("grp").onchange=table;
+el("tmore").onclick=()=>{SHOWALL=!SHOWALL;table()};
+  
 setRace("sen");
 function statusText(j){
   const s=j.status||{};let t="";

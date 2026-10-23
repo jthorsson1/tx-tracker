@@ -39,6 +39,8 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 .ebar{position:relative;height:14px}
 .ebar:before{content:"";position:absolute;left:calc(100% - 1px);top:-3px;bottom:-3px;width:1px;background:var(--mute)}
 .ebar i{position:absolute;top:2px;bottom:2px;border-radius:2px}
+#tip{position:fixed;z-index:10;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:260px}
+#tip small{color:var(--mute)}
 </style>
 </head>
 <body>
@@ -73,6 +75,7 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 <p class="note">2026 early ballots cast so far (in-person plus mail), compared with each past year's final early-vote total. The percent is how much of that year's total 2026 has reached, so 100% means 2026 has matched it. Groups add up ballots first and then divide, so big counties count more. Early voting runs Oct 19 to Oct 30, 2026. Texas registration is up about 8% since 2022 and roughly 20% since 2018, so finishing near 108% of the 2022 total or 120% of the 2018 total would only keep pace with registration. Only the 45 tracked counties are included, and the 2018 site has early numbers for 30 of them. Source: Texas Secretary of State early voting reports.</p>
 </div>
 </main>
+<div id="tip" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script>
 // 2018 Senate by county: [Cruz, O'Rourke]
@@ -112,6 +115,18 @@ function show(n){
   el("info").innerHTML="<b>"+n+" County</b><br>"+C.yr+": "+C.rn+" "+D[n][0].toLocaleString()+", "+C.dn+" "+D[n][1].toLocaleString()+" ("+fm(m18(n))+")"+
     (v?"<br>2026: "+C.d26+" "+v[0].toLocaleString()+", "+C.r26+" "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")":"<br>2026: no votes entered yet");
 }
+function tipHtml(n){
+  const v=vOf(n),p=D[n],f=x=>x.toLocaleString(),pc=(a,b)=>(a/(a+b)*100).toFixed(1)+"%";
+  let h="<b>"+n+" County</b>";
+  if(v&&v[0]+v[1]>0)h+="<br>2026: "+C.d26+" "+f(v[0])+" ("+pc(v[0],v[1])+")<br>"+C.r26+" "+f(v[1])+" ("+pc(v[1],v[0])+")";
+  else h+="<br>2026: no votes entered yet";
+  if(p)h+="<br><br>"+C.yr+": "+C.dn+" "+f(p[1])+" ("+pc(p[1],p[0])+")<br>"+C.rn+" "+f(p[0])+" ("+pc(p[0],p[1])+")";
+  return h+"<br><small>Share of the two-party vote</small>"}
+function tip(e,n){
+  const t=el("tip");
+  t.innerHTML=tipHtml(n);t.hidden=false;
+  t.style.left=Math.max(8,Math.min(e.clientX+14,innerWidth-t.offsetWidth-8))+"px";
+  t.style.top=Math.max(8,Math.min(e.clientY+14,innerHeight-t.offsetHeight-8))+"px"}
 function paint(){
   d3.selectAll("#map path").attr("fill",f=>mode==="vl"?(D[f.properties.NAME]?"#e3e7ec":"#c9ced6"):col(f.properties.NAME));
   el("bR").setAttribute("aria-pressed",mode==="r18");

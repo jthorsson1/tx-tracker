@@ -2,7 +2,7 @@
   "mode": "rehearsal",
   "manual": false,
   "turnout": { "senate": 1.17, "governor": 1.21 },
- "early": { "day": 0, "through": "Oct 22", "counties": { "Harris": 415725, "Jefferson": 23869, "McLennan": 21708, "Midland": 12201, "Montgomery": 62507, "Nueces": 30163, "Parker": 16841, "Travis": 158399 } },
+"early": { "day": 0, "through": "Oct 22", "counties": { "Bastrop": 11802, "Bell": 28094, "Bexar": 194395, "Bowie": 6678, "Brazoria": 40635, "Brazos": 14835, "Cameron": 28150, "Collin": 104382, "Comal": 25204, "Dallas": 248068, "Denton": 120625, "Harris": 415725, "Jefferson": 23869, "McLennan": 21708, "Midland": 12201, "Montgomery": 62507, "Nueces": 30163, "Parker": 16841, "Travis": 158399 } },
   "updated": "",
   "senate": {},
   "governor": {}

@@ -166,9 +166,9 @@ function bubbles(){
   if(mode!=="vl"||!GEO.f)return;
   const maxEv=Math.max(...NAMES.map(n=>left(n).ev)),g=svg.append("g").attr("id","bub");
   const items=GEO.f.map(f=>({n:f.properties.NAME,c:GEO.path.centroid(f)})).filter(o=>D[o.n]).map(o=>({n:o.n,c:o.c,L:left(o.n).left})).filter(o=>o.L>0&&!isNaN(o.c[0])).sort((a,b)=>b.L-a.L);
-  for(const o of items)g.append("circle").attr("cx",o.c[0]).attr("cy",o.c[1]).attr("r",34*Math.sqrt(o.L/maxEv)).attr("fill",bc(o.n)).attr("fill-opacity",.75).attr("stroke","#556").attr("stroke-width",.5).on("click",()=>show(o.n));
+   for(const o of items)g.append("circle").attr("cx",o.c[0]).attr("cy",o.c[1]).attr("r",34*Math.sqrt(o.L/maxEv)).attr("fill",bc(o.n)).attr("fill-opacity",.75).attr("stroke","#556").attr("stroke-width",.5).on("click",()=>show(o.n)).on("mousemove",e=>tip(e,o.n)).on("mouseleave",()=>{el("tip").hidden=true});
 }
-function vlPanel(){
+  function vlPanel(){
   let ev=0,cv=0,lt=0,tR=0,tD=0,cD=0,cR=0;const top=[];
   for(const n of NAMES){const o=left(n),v=VOTES[K][n];ev+=o.ev;cv+=Math.min(o.cv,o.ev);lt+=o.left;top.push([n,o.left]);tR+=D[n][0];tD+=D[n][1];if(v){cD+=v[0];cR+=v[1];}}
   top.sort((a,b)=>b[1]-a[1]);
@@ -327,7 +327,9 @@ function refresh(){reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();pain
     const tx=g.features.filter(f=>(f.properties&&f.properties.STATE==="48")||String(f.id).startsWith("48"));
     const proj=d3.geoMercator().fitSize([600,560],{type:"FeatureCollection",features:tx});
     d3.select("#map").selectAll("path").data(tx).join("path").attr("d",GEO.path=d3.geoPath(proj))
-      .on("click",(e,f)=>show(f.properties.NAME));
+      .on("click",(e,f)=>show(f.properties.NAME))
+      .on("mousemove",(e,f)=>tip(e,f.properties.NAME))
+      .on("mouseleave",()=>{el("tip").hidden=true});
     GEO.f=tx;
     el("msg").textContent="";
     paint();

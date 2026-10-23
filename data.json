@@ -2,7 +2,7 @@
   "mode": "rehearsal",
   "manual": false,
   "turnout": { "senate": 1.17, "governor": 1.21 },
- "early": { "day": 0, "through": "Oct 22", "counties": { "Jefferson": 23869 } },
+ "early": { "day": 0, "through": "Oct 22", "counties": { "Harris": 415725, "Jefferson": 23869, "McLennan": 21708, "Midland": 12201, "Montgomery": 62507, "Nueces": 30163, "Parker": 16841, "Travis": 158399 } },
   "updated": "",
   "senate": {},
   "governor": {}

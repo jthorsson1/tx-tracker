@@ -230,27 +230,27 @@ function scoreboard(){
 // Early vote: [county, group, 2022 total early ballots, 2018 total early ballots (0=none)]
 const EV=[["Bastrop","S",19645,0],["Bell","M",57308,57997],["Bexar","U",385456,414192],["Bowie","M",15548,0],["Brazoria","S",80552,88844],["Brazos","M",37452,42052],["Cameron","B",53786,54576],["Collin","S",262824,286393],["Comal","S",53325,48483],["Dallas","U",408845,529727],["Denton","S",226738,228650],["Ector","M",14671,0],["El Paso","B",102701,139105],["Ellis","S",45184,45163],["Fort Bend","S",184846,199267],["Galveston","S",80998,90166],["Grayson","M",29124,0],["Gregg","M",23244,0],["Guadalupe","S",38713,39782],["Harris","U",743838,855711],["Hays","S",65211,62583],["Henderson","S",17866,0],["Hidalgo","B",101247,114560],["Hood","S",17864,0],["Hunt","S",14528,0],["Jefferson","M",47128,58775],["Johnson","S",37179,38667],["Kaufman","S",26781,0],["Lubbock","M",59492,71075],["McLennan","M",44891,50444],["Midland","M",26123,0],["Montgomery","S",139397,138125],["Nueces","B",61069,67630],["Parker","S",42263,40750],["Randall","M",32848,36214],["Rockwall","S",30123,0],["Smith","M",51304,55845],["Tarrant","U",407050,465817],["Taylor","M",26245,0],["Tom Green","M",20475,0],["Travis","U",327024,368048],["Webb","B",29397,33519],["Wichita","M",20950,0],["Williamson","S",162486,162574],["Wise","S",17361,0]];const GN={U:"Big urban",S:"Suburban/exurban",M:"Small metro/rural",B:"Border/Hispanic-heavy"};
 let EARLY={day:0,counties:{}},eyr=2022;
-function ebar(r){const d=r-1,w=Math.min(Math.abs(d)/0.5,1)*50;return d>=0?"<i style=\"left:50%;width:"+w+"%;background:#2166ac\"></i>":"<i style=\"left:"+(50-w)+"%;width:"+w+"%;background:#b7791f\"></i>"}
-function renderEarly(){
+function ebar(r){const w=Math.min(Math.max(r,0),1)*100;return "<i style=\"left:0;width:"+w+"%;background:#2166ac\"></i>"}
+  function renderEarly(){
   const cnt=EARLY.counties||{},idx={};
   for(const k of Object.keys(cnt))idx[norm(k)]=cnt[k];
-  const day1=EARLY.day===1,agg={};let tn=0,tb=0,kc=0;
+  const agg={};let tn=0,tb=0,kc=0;
   el("eh").textContent=eyr;
   el("eRows").innerHTML=EV.map(c=>{
-    const b=eyr===2022?c[2]:c[3],n=idx[norm(c[0])],ok=day1&&n>0&&b>0;
+    const b=eyr===2022?c[2]:c[3],n=idx[norm(c[0])],ok=n>0&&b>0;
     if(ok){const a=agg[c[1]]||(agg[c[1]]={n:0,b:0,k:0});a.n+=n;a.b+=b;a.k++;tn+=n;tb+=b;kc++}
-    return "<tr><td>"+c[0]+"</td><td>"+GN[c[1]]+"</td><td>"+(b?b.toLocaleString():"–")+"</td><td>"+(n>0?n.toLocaleString():"–")+"</td><td>"+(ok?(n/b).toFixed(2):"")+"</td></tr>"}).join("");
-  el("eInfo").textContent=EARLY.through?"Early ballots cast through close of business "+EARLY.through+" (day "+EARLY.day+").":"";
+    return "<tr><td>"+c[0]+"</td><td>"+GN[c[1]]+"</td><td>"+(b?b.toLocaleString():"–")+"</td><td>"+(n>0?n.toLocaleString():"–")+"</td><td>"+(ok?(n/b*100).toFixed(1)+"%":"")+"</td></tr>"}).join("");
+  el("eInfo").textContent=EARLY.through?"2026 early ballots cast through close of business "+EARLY.through+".":"";
   let h="";
-  if(!Object.keys(cnt).length)h="<p class=\"note\">No 2026 early-vote numbers yet. Day 1 totals post after close of business on Oct 19.</p>";
-  else if(!day1)h="<p class=\"note\">These are day "+EARLY.day+" totals. Benchmarks for that day are not loaded yet, so ratios are not shown.</p>";
+  if(!Object.keys(cnt).length)h="<p class=\"note\">No 2026 early-vote numbers yet.</p>";
+  else if(!kc)h="<p class=\"note\">No county has both a 2026 number and a "+eyr+" total yet.</p>";
   else{
-    const row=(l,s,r)=>"<div class=\"g\"><div>"+l+"<small>"+s+"</small></div><div class=\"ebar\">"+ebar(r)+"</div><b>"+r.toFixed(2)+"</b></div>";
+    const row=(l,s,r)=>"<div class=\"g\"><div>"+l+"<small>"+s+"</small></div><div class=\"ebar\">"+ebar(r)+"</div><b>"+(r*100).toFixed(1)+"%</b></div>";
     h=row("All counties entered",kc+" counties",tn/tb);
     for(const g of Object.keys(GN))if(agg[g])h+=row(GN[g],agg[g].k+" counties",agg[g].n/agg[g].b);
   }
   el("eSum").innerHTML=h;
-}
+}  
 function tab(k){el("raceView").hidden=false;el("earlyView").hidden=true;el("tE").setAttribute("aria-pressed",false);setRace(k)}
 el("tE").onclick=()=>{el("raceView").hidden=true;el("earlyView").hidden=false;el("tS").setAttribute("aria-pressed",false);el("tG").setAttribute("aria-pressed",false);el("tE").setAttribute("aria-pressed",true);renderEarly()};
 for(const [y,id] of [[2022,"e22"],[2018,"e18"]])el(id).onclick=()=>{eyr=y;el("e22").setAttribute("aria-pressed",y===2022);el("e18").setAttribute("aria-pressed",y===2018);renderEarly()};

@@ -41,6 +41,9 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 .ebar i{position:absolute;top:2px;bottom:2px;border-radius:2px}
 #tip{position:fixed;z-index:10;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:260px}
 #tip small{color:var(--mute)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.tools input,.tools select{padding:8px 10px;font:inherit;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px}
+#tmore{margin:8px 0 16px;padding:9px 14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;font:inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -58,9 +61,11 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 <p class="note" id="vcap"></p>
 <div id="info">Click a county on the map or in the table.</div>
 <p class="note" id="cov"></p>
+<div class="tools"><input id="q" type="search" placeholder="Search a county" autocomplete="off"><select id="grp"><option value="">All counties</option><option value="U">Big urban</option><option value="S">Suburban/exurban</option><option value="M">Small metro/rural</option><option value="B">Border/Hispanic-heavy</option></select><span class="note" id="tcount"></span></div>
 <div class="tbl"><table>
 <thead><tr><th>County</th><th>2026 votes</th><th id="hy">Past margin</th><th>2026 margin</th><th>Swing</th></tr></thead>
 <tbody id="rows"></tbody></table></div>
+<p><button id="tmore" hidden>Show all counties</button></p>
 <p class="note">Margin is the Democrat's lead or deficit in points among the two main candidates. Swing is the change in that margin since the past election, positive meaning a shift toward Democrats. Grey counties have no data in the selected view. Counties with no past result loaded show a dash for past margin and swing.</p>
 <p class="note">Results come from <a href="https://civicapi.org">civicAPI</a>, checked every 5 minutes, and are unofficial. Official results are from the Texas Secretary of State.</p>
 </div>

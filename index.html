@@ -61,7 +61,7 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 <p class="note" id="vcap"></p>
 <div id="info">Click a county on the map or in the table.</div>
 <p class="note" id="cov"></p>
-<div class="tools"><input id="q" type="search" placeholder="Search a county" autocomplete="off"><select id="grp"><option value="">All counties</option><option value="U">Big urban</option><option value="S">Suburban/exurban</option><option value="M">Small metro/rural</option><option value="B">Border/Hispanic-heavy</option></select><span class="note" id="tcount"></span></div>
+<div class="tools"><input id="q" type="search" placeholder="Search a county" autocomplete="off"><select id="grp"><option value="">All counties</option><option value="U">Big urban</option><option value="S">Suburban/exurban</option><option value="M">Small metro</option><option value="R">Rural</option><option value="B">Border/Hispanic-heavy</option></select><span class="note" id="tcount"></span></div>
 <div class="tbl"><table>
 <thead><tr><th>County</th><th>2026 votes</th><th id="hy">Past margin</th><th>2026 margin</th><th>Swing</th></tr></thead>
 <tbody id="rows"></tbody></table></div>
@@ -77,7 +77,7 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 <div class="tbl"><table>
 <thead><tr><th>County</th><th>Group</th><th id="eh">2022</th><th>2026 so far</th><th>% of final</th></tr></thead>
 <tbody id="eRows"></tbody></table></div>
-<p class="note">2026 early ballots cast so far (in-person plus mail), compared with each past year's final early-vote total. The percent is how much of that year's total 2026 has reached, so 100% means 2026 has matched it. Groups add up ballots first and then divide, so big counties count more. Early voting runs Oct 19 to Oct 30, 2026. Texas registration is up about 8% since 2022 and roughly 20% since 2018, so finishing near 108% of the 2022 total or 120% of the 2018 total would only keep pace with registration. Only the 45 tracked counties are included, and the 2018 site has early numbers for 30 of them. Source: Texas Secretary of State early voting reports.</p>
+<p class="note">2026 early ballots cast so far (in-person plus mail), compared with each past year's final early-vote total. The percent is how much of that year's total 2026 has reached, so 100% means 2026 has matched it. Groups add up ballots first and then divide, so big counties count more. Early voting runs Oct 19 to Oct 30, 2026. Texas registration is up about 8% since 2022 and roughly 20% since 2018, so finishing near 108% of the 2022 total or 120% of the 2018 total would only keep pace with registration. Only the 53 tracked counties are included. The 2018 site has early numbers for 30 of them, and the eight rural counties have 2022 totals only. Source: Texas Secretary of State early voting reports.</p>
 </div>
 </main>
 <div id="tip" hidden></div>
@@ -155,7 +155,7 @@ function table(){
   const hit=all.filter(n=>(!q||norm(n).includes(q))&&(!g||gm[norm(n)]===g));
   const filt=q||g,shown=filt||SHOWALL?hit:hit.slice(0,20);
   el("rows").innerHTML=shown.map(n=>{const u=vOf(n);return "<tr data-n=\""+n+"\"><td>"+n+"</td><td>"+(u?(u[0]+u[1]).toLocaleString():"–")+"</td><td>"+fm(m18(n))+"</td><td>"+fm(m26(n))+"</td><td>"+fm(sw(n))+"</td></tr>"}).join("");
-  el("tcount").textContent=filt?(hit.length?hit.length+" of "+all.length+" counties match":"No county matches")+(g?" (groups cover only the 45 tracked counties)":""):"Showing "+shown.length+" of "+all.length+" counties";
+  el("tcount").textContent=filt?(hit.length?hit.length+" of "+all.length+" counties match":"No county matches")+(g?" (groups cover only the tracked counties)":""):"Showing "+shown.length+" of "+all.length+" counties";
   el("tmore").hidden=!!filt||all.length<=20;
   el("tmore").textContent=SHOWALL?"Show top 20 only":"Show all "+all.length+" counties";
   const tot=NAMES.reduce((s,n)=>s+D[n][0]+D[n][1],0);

@@ -58,7 +58,7 @@ tr.chg td{background:rgba(33,102,172,.18)}
 @media (max-width:520px){.mapkey{grid-template-columns:minmax(0,1fr)}#key{order:-1}}
 .d{color:#2166ac}.r{color:#b2182b}
 @media (prefers-color-scheme:dark){.d{color:#6fa8dc}.r{color:#e57373}}
-.top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.top{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:12px;align-items:start}
 #vs{margin:0 0 20px;padding:12px;background:var(--panel);border:1px solid var(--line)}
 #vs h3{margin:0 0 6px;font:600 16px/1.2 Georgia,serif}
 #vs table{min-width:0}
@@ -194,8 +194,8 @@ function voteShare(){
   const nowD=t>0?cd/t*100:null,finD=p?50+p.M/2:null,w=p?1.2816*p.sd/2:null;
   const rng=(lo,hi)=>lo==null?"–":lo.toFixed(1)+"–"+pc(hi);
   const row=(name,now,fin,lo,hi)=>"<tr><td>"+name+"</td><td>"+(now==null?"–":pc(now))+"</td><td>"+(fin==null?"–":pc(fin))+"</td><td>"+rng(lo,hi)+"</td></tr>";
-  el("vs").innerHTML="<h3>Vote share</h3><table><thead><tr><th>Candidate</th><th>Now</th><th>Projected final</th><th>80% range</th></tr></thead><tbody>"+
-    row(C.d26+" (D)",nowD,finD,p?finD-w:null,p?finD+w:null)+row(C.r26+" (R)",nowD==null?null:100-nowD,finD==null?null:100-finD,p?100-finD-w:null,p?100-finD+w:null)+
+    el("vs").innerHTML="<h3>Vote share</h3><table><thead><tr><th>Candidate</th><th>Now</th><th>Proj. final</th><th>80% range</th></tr></thead><tbody>"+
+      row(C.d26+" (D)",nowD,finD,p?finD-w:null,p?finD+w:null)+row(C.r26+" (R)",nowD==null?null:100-nowD,finD==null?null:100-finD,p?100-finD-w:null,p?100-finD+w:null)+
     "</tbody></table><p class=\"note\" style=\"margin:8px 0 0\">Two-party share only. “Now” is the counted vote; “Projected final” is the model’s estimate, and the range is where it should land about 80% of the time.</p>"}
   function table(){
   const have=new Set(NAMES.map(norm));

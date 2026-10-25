@@ -46,12 +46,16 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 #tmore{margin:8px 0 16px;padding:9px 14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;font:inherit;cursor:pointer}
   #chgbar{margin:0 0 10px;padding:8px 12px;background:var(--panel);border-left:4px solid #2166ac;font-size:14px}
 tr.chg td{background:rgba(33,102,172,.18)}
+#stat{display:inline-block;margin:0 0 12px;padding:6px 12px;border-radius:999px;font-size:13px;background:var(--panel);border:1px solid var(--line);color:var(--mute)}
+#stat.warn{border-color:#b7791f;color:#b7791f}
+#stat.bad{border-color:#b2182b;color:#b2182b}
 </style>
 </head>
 <body>
 <main>
 <h1 id="h1">Texas 2026</h1>
 <p class="sub"><span id="sub"></span> <span id="upd"></span></p>
+<div id="stat" hidden></div>
 <div class="seg"><button id="tS" aria-pressed="true">Senate</button><button id="tG" aria-pressed="false">Governor</button><button id="tE" aria-pressed="false">Early vote</button></div>
 <div id="raceView">
 <div class="seg"><button id="bR" aria-pressed="true">Past result</button><button id="bT" aria-pressed="false">2026 result</button><button id="bS" aria-pressed="false">Swing</button><button id="bV" aria-pressed="false">Vote left</button></div>
@@ -146,7 +150,7 @@ function paint(){
   el("vcap").textContent=mode==="vl"?"Circle area = estimated votes left in each county. Color = current margin. Pale blue-grey circles have no votes counted yet.":"";
   bubbles();
 }
-let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}};
+let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},LASTCHK=null,LASTCHKT=0,LASTST={};
   function table(){
   const have=new Set(NAMES.map(norm));
   const extra=Object.keys(VOTES[K]).filter(n=>n!=="Statewide"&&!have.has(norm(n)));
@@ -341,16 +345,31 @@ function chgBanner(){
   names.sort((a,c)=>CHG[K][c]-CHG[K][a]);
   b.hidden=false;
   b.textContent="Just updated: "+names.slice(0,6).join(", ")+(names.length>6?" and "+(names.length-6)+" more":"")}
+function statPill(){
+  const p=el("stat"),st=LASTST;
+  if(LASTCHK===null||(!LASTCHK&&!st.manual)){p.hidden=true;return}
+  const mins=Math.floor((Date.now()-LASTCHKT)/60000);
+  let cls="",txt="";
+  if(st.manual)txt="Numbers entered by hand";
+  else if(st.ok===false){cls="bad";txt="Data feed problem"+(st.note?": "+st.note:"")+". Showing the last good numbers."}
+  else if(mins>=20){cls="warn";txt="No new data check seen for "+mins+" minutes. Numbers may be out of date."}
+  else txt="Data checked "+LASTCHK+". Refreshes about every 5 minutes.";
+  if(st.mode==="rehearsal")txt="REHEARSAL · "+txt;
+  p.className=cls;p.textContent=txt;p.hidden=false}
 function loadVotes(){return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(j=>{
   VOTES.sen=rekey(j.senate||{},SEN);VOTES.gov=rekey(j.governor||{},GOV);
   const now=Date.now(),ns={sen:snap(VOTES.sen),gov:snap(VOTES.gov)};
   if(PSNAP)for(const k of ["sen","gov"])for(const n of Object.keys(ns[k]))if(ns[k][n]!==(PSNAP[k][n]||0))CHG[k][n]=now;
   PSNAP=ns;
+  const s=j.status||{},c=s.checked||"";
+  if(c!==LASTCHK){LASTCHK=c;LASTCHKT=Date.now()}
+  LASTST=s;
   EARLY=j.early||{day:0,counties:{}};
   if(j.turnout){TURN.sen=j.turnout.senate||TURN.sen;TURN.gov=j.turnout.governor||TURN.gov;}
   el("upd").textContent=statusText(j);
+  statPill();
 }).catch(()=>{})}
-  function refresh(){reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();if(SEL)show(SEL);if(!el("earlyView").hidden&&!EDITM)renderEarly()}
+  function refresh(){reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();if(SEL)show(SEL);if(!el("earlyView").hidden&&!EDITM)renderEarly();statPill()}
   loadVotes().finally(()=>{
   setRace(K);
   fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json").then(r=>r.json()).then(g=>{

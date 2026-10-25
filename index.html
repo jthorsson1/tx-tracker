@@ -183,17 +183,18 @@ function keyPanel(){
     const o=left(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);
     return "<tr data-n=\""+n+"\"><td>"+n+"</td><td><span class=\"kbar\"><i style=\"width:"+p+"%\"></i></span>"+p+"%</td><td>"+fc(m26(n))+"</td><td>"+fc(sw(n))+"</td></tr>"}).join("");
   el("key").innerHTML="<h3>Key counties</h3><table><thead><tr><th>County</th><th>Counted</th><th>2026</th><th>Swing</th></tr></thead><tbody>"+rows+"</tbody></table><p class=\"note\" style=\"margin:8px 0 0\">Counted is the share of expected vote. Small counties often report first, so early swings there can be large.</p>"}
-  function voteShare(){
+function voteShare(){
   const V=VOTES[K];let cd=0,cr=0;
   for(const n of Object.keys(V)){if(n==="Statewide")continue;cd+=V[n][0];cr+=V[n][1]}
   const st=V.Statewide;
   if(st&&st[0]>=cd&&st[1]>=cr){cd=st[0];cr=st[1]}
   const p=project(C,V,TURN[K]),pc=x=>x.toFixed(1)+"%",t=cd+cr;
-  const nowD=t>0?cd/t*100:null,finD=p?50+p.M/2:null;
-  const row=(name,now,fin)=>"<tr><td>"+name+"</td><td>"+(now==null?"–":pc(now))+"</td><td>"+(fin==null?"–":pc(fin))+"</td></tr>";
-  el("vs").innerHTML="<h3>Vote share</h3><table><thead><tr><th>Candidate</th><th>Now</th><th>Projected final</th></tr></thead><tbody>"+
-    row(C.d26+" (D)",nowD,finD)+row(C.r26+" (R)",nowD==null?null:100-nowD,finD==null?null:100-finD)+
-    "</tbody></table><p class=\"note\" style=\"margin:8px 0 0\">Two-party share only. “Now” is the counted vote; “Projected final” is the model’s estimate.</p>"}
+  const nowD=t>0?cd/t*100:null,finD=p?50+p.M/2:null,w=p?1.2816*p.sd/2:null;
+  const rng=(lo,hi)=>lo==null?"–":lo.toFixed(1)+"–"+pc(hi);
+  const row=(name,now,fin,lo,hi)=>"<tr><td>"+name+"</td><td>"+(now==null?"–":pc(now))+"</td><td>"+(fin==null?"–":pc(fin))+"</td><td>"+rng(lo,hi)+"</td></tr>";
+  el("vs").innerHTML="<h3>Vote share</h3><table><thead><tr><th>Candidate</th><th>Now</th><th>Projected final</th><th>80% range</th></tr></thead><tbody>"+
+    row(C.d26+" (D)",nowD,finD,p?finD-w:null,p?finD+w:null)+row(C.r26+" (R)",nowD==null?null:100-nowD,finD==null?null:100-finD,p?100-finD-w:null,p?100-finD+w:null)+
+    "</tbody></table><p class=\"note\" style=\"margin:8px 0 0\">Two-party share only. “Now” is the counted vote; “Projected final” is the model’s estimate, and the range is where it should land about 80% of the time.</p>"}
   function table(){
   const have=new Set(NAMES.map(norm));
   const extra=Object.keys(VOTES[K]).filter(n=>n!=="Statewide"&&!have.has(norm(n)));

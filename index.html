@@ -56,6 +56,8 @@ tr.chg td{background:rgba(33,102,172,.18)}
 .kbar{display:inline-block;width:46px;height:8px;margin-right:6px;background:var(--line);border-radius:4px;overflow:hidden;vertical-align:middle}
 .kbar i{display:block;height:100%;background:#2166ac}
 @media (max-width:760px){.mapkey{grid-template-columns:minmax(0,1fr)}#key{order:-1}}
+.d{color:#2166ac}.r{color:#b2182b}
+@media (prefers-color-scheme:dark){.d{color:#6fa8dc}.r{color:#e57373}}
 </style>
 </head>
 <body>
@@ -163,6 +165,13 @@ function paint(){
   bubbles();
 }
 let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},LASTCHK=null,LASTCHKT=0,LASTST={};
+const KEYC=["Harris","Dallas","Tarrant","Bexar","Travis","Collin","Fort Bend","Williamson","El Paso","Montgomery","Hidalgo","Cameron","Angelina","Potter","Gillespie"];
+function keyPanel(){
+  const fc=x=>x==null?"–":"<span class=\""+(x>=0?"d":"r")+"\">"+fm(x)+"</span>";
+  const rows=KEYC.filter(n=>D[n]).map(n=>{
+    const o=left(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);
+    return "<tr data-n=\""+n+"\"><td>"+n+"</td><td><span class=\"kbar\"><i style=\"width:"+p+"%\"></i></span>"+p+"%</td><td>"+fc(m26(n))+"</td><td>"+fc(sw(n))+"</td></tr>"}).join("");
+  el("key").innerHTML="<h3>Key counties</h3><table><thead><tr><th>County</th><th>Counted</th><th>2026</th><th>Swing</th></tr></thead><tbody>"+rows+"</tbody></table><p class=\"note\" style=\"margin:8px 0 0\">Counted is the share of expected vote. Small counties often report first, so early swings there can be large.</p>"}
   function table(){
   const have=new Set(NAMES.map(norm));
   const extra=Object.keys(VOTES[K]).filter(n=>n!=="Statewide"&&!have.has(norm(n)));
@@ -190,8 +199,8 @@ let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},LASTCHK=null,LASTCHKT=0,LASTST=
   el("hy").textContent=C.yr+" margin";
   el("tS").setAttribute("aria-pressed",k==="sen");el("tG").setAttribute("aria-pressed",k==="gov");
   SEL=null;el("info").textContent="Click a county on the map or in the table.";
-  reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();
-}
+  reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();keyPanel();
+  }
 function left(n){const v=VOTES[K][n],ev=(D[n][0]+D[n][1])*TURN[K],cv=v?v[0]+v[1]:0;return {ev,cv,left:Math.max(0,ev-cv)}}
 const bc=n=>{const x=m26(n);return x==null?"#9db2c8":d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/30))/2)};
 function bubbles(){
@@ -340,6 +349,7 @@ el("tG").onclick=()=>tab("gov");
 el("q").oninput=table;
 el("grp").onchange=table;
 el("tmore").onclick=()=>{SHOWALL=!SHOWALL;table()};
+el("key").onclick=e=>{const tr=e.target.closest("tr");if(tr&&tr.dataset.n)show(tr.dataset.n)};
   
 setRace("sen");
 function statusText(j){
@@ -381,7 +391,7 @@ function loadVotes(){return fetch("data.json?t="+Date.now(),{cache:"no-store"}).
   el("upd").textContent=statusText(j);
   statPill();
 }).catch(()=>{})}
-  function refresh(){reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();if(SEL)show(SEL);if(!el("earlyView").hidden&&!EDITM)renderEarly();statPill()}
+  function refresh(){reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();keyPanel();if(SEL)show(SEL);if(!el("earlyView").hidden&&!EDITM)renderEarly();statPill()}
   loadVotes().finally(()=>{
   setRace(K);
   fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json").then(r=>r.json()).then(g=>{

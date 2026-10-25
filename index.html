@@ -146,8 +146,8 @@ function paint(){
   el("vcap").textContent=mode==="vl"?"Circle area = estimated votes left in each county. Color = current margin. Pale blue-grey circles have no votes counted yet.":"";
   bubbles();
 }
-let SHOWALL=false;
-function table(){
+let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}};
+  function table(){
   const have=new Set(NAMES.map(norm));
   const extra=Object.keys(VOTES[K]).filter(n=>n!=="Statewide"&&!have.has(norm(n)));
   const all=NAMES.concat(extra);
@@ -157,7 +157,8 @@ function table(){
   for(const c of EV)gm[norm(c[0])]=c[1];
   const hit=all.filter(n=>(!q||norm(n).includes(q))&&(!g||gm[norm(n)]===g));
   const filt=q||g,shown=filt||SHOWALL?hit:hit.slice(0,20);
-  el("rows").innerHTML=shown.map(n=>{const u=vOf(n);return "<tr data-n=\""+n+"\"><td>"+n+"</td><td>"+(u?(u[0]+u[1]).toLocaleString():"–")+"</td><td>"+fm(m18(n))+"</td><td>"+fm(m26(n))+"</td><td>"+fm(sw(n))+"</td></tr>"}).join("");
+  el("rows").innerHTML=shown.map(n=>{const u=vOf(n),t=CHG[K][n];return "<tr data-n=\""+n+"\""+(t&&Date.now()-t<180000?" class=\"chg\"":"")+"><td>"+n+"</td><td>"+(u?(u[0]+u[1]).toLocaleString():"–")+"</td><td>"+fm(m18(n))+"</td><td>"+fm(m26(n))+"</td><td>"+fm(sw(n))+"</td></tr>"}).join("");
+  chgBanner();
   el("tcount").textContent=filt?(hit.length?hit.length+" of "+all.length+" counties match":"No county matches")+(g?" (groups cover only the tracked counties)":""):"Showing "+shown.length+" of "+all.length+" counties";
   el("tmore").hidden=!!filt||all.length<=20;
   el("tmore").textContent=SHOWALL?"Show top 20 only":"Show all "+all.length+" counties";
@@ -333,13 +334,23 @@ function statusText(j){
   if(j.updated)t+="Votes last changed "+j.updated+".";
   return t;
 }
+function snap(v){const o={};for(const n of Object.keys(v))if(n!=="Statewide")o[n]=v[n][0]+v[n][1];return o}
+function chgBanner(){
+  const b=el("chgbar"),now=Date.now(),names=Object.keys(CHG[K]).filter(n=>now-CHG[K][n]<180000);
+  if(!names.length){b.hidden=true;return}
+  names.sort((a,c)=>CHG[K][c]-CHG[K][a]);
+  b.hidden=false;
+  b.textContent="Just updated: "+names.slice(0,6).join(", ")+(names.length>6?" and "+(names.length-6)+" more":"")}
 function loadVotes(){return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(j=>{
   VOTES.sen=rekey(j.senate||{},SEN);VOTES.gov=rekey(j.governor||{},GOV);
+  const now=Date.now(),ns={sen:snap(VOTES.sen),gov:snap(VOTES.gov)};
+  if(PSNAP)for(const k of ["sen","gov"])for(const n of Object.keys(ns[k]))if(ns[k][n]!==(PSNAP[k][n]||0))CHG[k][n]=now;
+  PSNAP=ns;
   EARLY=j.early||{day:0,counties:{}};
   if(j.turnout){TURN.sen=j.turnout.senate||TURN.sen;TURN.gov=j.turnout.governor||TURN.gov;}
   el("upd").textContent=statusText(j);
 }).catch(()=>{})}
-function refresh(){reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();if(SEL)show(SEL);if(!el("earlyView").hidden&&!EDITM)renderEarly()}
+  function refresh(){reindex();if(!picked)mode=hasVotes()?"r26":"r18";table();paint();needle();vlPanel();if(SEL)show(SEL);if(!el("earlyView").hidden&&!EDITM)renderEarly()}
   loadVotes().finally(()=>{
   setRace(K);
   fetch("https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json").then(r=>r.json()).then(g=>{

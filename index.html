@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=640">
 <title>Texas 2026 county tracker</title>
 <style>
 :root{--bg:#f6f7f9;--ink:#15202b;--mute:#5b6773;--line:#d9dee4;--panel:#fff}
@@ -55,14 +55,15 @@ tr.chg td{background:rgba(33,102,172,.18)}
 #key table{min-width:0}
 .kbar{display:inline-block;width:46px;height:8px;margin-right:6px;background:var(--line);border-radius:4px;overflow:hidden;vertical-align:middle}
 .kbar i{display:block;height:100%;background:#2166ac}
-@media (max-width:760px){.mapkey{grid-template-columns:minmax(0,1fr)}#key{order:-1}}
+@media (max-width:520px){.mapkey{grid-template-columns:minmax(0,1fr)}#key{order:-1}}
 .d{color:#2166ac}.r{color:#b2182b}
 @media (prefers-color-scheme:dark){.d{color:#6fa8dc}.r{color:#e57373}}
 .top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
 #vs{margin:0 0 20px;padding:12px;background:var(--panel);border:1px solid var(--line)}
 #vs h3{margin:0 0 6px;font:600 16px/1.2 Georgia,serif}
 #vs table{min-width:0}
-@media (max-width:760px){.top{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:520px){.top{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:700px){#key th,#key td,#vs th,#vs td{padding:4px 4px;font-size:13px}.kbar{width:34px}}
 </style>
 </head>
 <body>

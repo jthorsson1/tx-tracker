@@ -49,6 +49,13 @@ tr.chg td{background:rgba(33,102,172,.18)}
 #stat{display:inline-block;margin:0 0 12px;padding:6px 12px;border-radius:999px;font-size:13px;background:var(--panel);border:1px solid var(--line);color:var(--mute)}
 #stat.warn{border-color:#b7791f;color:#b7791f}
 #stat.bad{border-color:#b2182b;color:#b2182b}
+.mapkey{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start;margin:0 0 16px}
+#key{padding:12px;background:var(--panel);border:1px solid var(--line)}
+#key h3{margin:0 0 6px;font:600 16px/1.2 Georgia,serif}
+#key table{min-width:0}
+.kbar{display:inline-block;width:46px;height:8px;margin-right:6px;background:var(--line);border-radius:4px;overflow:hidden;vertical-align:middle}
+.kbar i{display:block;height:100%;background:#2166ac}
+@media (max-width:760px){.mapkey{grid-template-columns:minmax(0,1fr)}#key{order:-1}}
 </style>
 </head>
 <body>
@@ -61,9 +68,14 @@ tr.chg td{background:rgba(33,102,172,.18)}
 <div class="seg"><button id="bR" aria-pressed="true">Past result</button><button id="bT" aria-pressed="false">2026 result</button><button id="bS" aria-pressed="false">Swing</button><button id="bV" aria-pressed="false">Vote left</button></div>
   <div id="sb" style="display:none;margin:0 0 20px;padding:12px;background:var(--panel);border:1px solid var(--line)"></div><div class="needle" id="ndl"></div>
 <div id="vl"></div>
+<div class="mapkey">
+<div>
 <svg id="map" viewBox="0 0 600 560" role="img" aria-label="Map of Texas counties"></svg>
 <div id="msg">Loading map...</div>
 <div class="leg"><span id="l1"></span><i></i><span id="l2"></span></div>
+</div>
+<div id="key"><h3>Key counties</h3><p class="note">The key counties will appear here.</p></div>
+</div>
 <p class="note" id="vcap"></p>
 <div id="info">Click a county on the map or in the table.</div>
 <p class="note" id="cov"></p>

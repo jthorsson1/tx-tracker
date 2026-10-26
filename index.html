@@ -154,12 +154,12 @@ function show(n){
   if(!D[n]){const u=vOf(n);el("info").innerHTML=u?"<b>"+n+" County</b><br>2026: "+C.d26+" "+u[0].toLocaleString()+", "+C.r26+" "+u[1].toLocaleString()+" ("+fm(m26(n))+")<br>No past result loaded for this county yet.":n+" County: no data yet.";return;}
   const v=vOf(n);
   el("info").innerHTML="<b>"+n+" County</b><br>"+C.yr+": "+C.rn+" "+D[n][0].toLocaleString()+", "+C.dn+" "+D[n][1].toLocaleString()+" ("+fm(m18(n))+")"+
-    (v?"<br>2026: "+C.d26+" "+v[0].toLocaleString()+", "+C.r26+" "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")":"<br>2026: no votes entered yet");
+        (v?"<br>2026: "+C.d26+" "+v[0].toLocaleString()+", "+C.r26+" "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")<br>About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"<br>2026: no votes entered yet");
 }
 function tipHtml(n){
   const v=vOf(n),p=D[n],f=x=>x.toLocaleString(),pc=(a,b)=>(a/(a+b)*100).toFixed(1)+"%";
   let h="<b>"+n+" County</b>";
-  if(v&&v[0]+v[1]>0)h+="<br>2026: "+C.d26+" "+f(v[0])+" ("+pc(v[0],v[1])+")<br>"+C.r26+" "+f(v[1])+" ("+pc(v[1],v[0])+")";
+  if(v&&v[0]+v[1]>0)h+="<br>2026: "+C.d26+" "+f(v[0])+" ("+pc(v[0],v[1])+")<br>"+C.r26+" "+f(v[1])+" ("+pc(v[1],v[0])+")"+(p?"<br>About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"");
   else h+="<br>2026: no votes entered yet";
   if(p)h+="<br><br>"+C.yr+": "+C.dn+" "+f(p[1])+" ("+pc(p[1],p[0])+")<br>"+C.rn+" "+f(p[0])+" ("+pc(p[0],p[1])+")";
   return h+"<br><small>Share of the two-party vote</small>"}

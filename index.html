@@ -76,7 +76,7 @@ tr.chg td{background:rgba(33,102,172,.18)}
 <div id="stat" hidden></div>
 <div class="seg"><button id="tS" aria-pressed="true">Senate</button><button id="tG" aria-pressed="false">Governor</button><button id="tE" aria-pressed="false">Early vote</button></div>
 <div id="raceView">
-<div class="seg"><button id="bR" aria-pressed="true">Past result</button><button id="bT" aria-pressed="false">2026 result</button><button id="bS" aria-pressed="false">Swing</button><button id="bV" aria-pressed="false">Vote left</button></div>
+<div class="seg"><button id="bR" aria-pressed="true">Past result</button><button id="bT" aria-pressed="false">2026 result</button><button id="bS" aria-pressed="false">Swing</button><button id="bV" aria-pressed="false">Vote left</button><button id="bA" aria-pressed="false">Shift arrows</button></div>
   <div id="sb" style="display:none;margin:0 0 20px;padding:12px;background:var(--panel);border:1px solid var(--line)"></div>
 <div class="top">
 <div class="needle" id="ndl"></div>
@@ -168,6 +168,7 @@ function tip(e,n){
   t.innerHTML=tipHtml(n);t.hidden=false;
   t.style.left=Math.max(8,Math.min(e.clientX+14,innerWidth-t.offsetWidth-8))+"px";
   t.style.top=Math.max(8,Math.min(e.clientY+14,innerHeight-t.offsetHeight-8))+"px"}
+  function arrows(){d3.select("#map").selectAll("#arr").remove()}
   const CITIES=[["Houston",-95.37,29.76,"start"],["Dallas",-96.8,32.78,"start"],["Fort Worth",-97.33,32.76,"end"],["San Antonio",-98.49,29.42,"end"],["Austin",-97.74,30.27,"end"],["El Paso",-106.49,31.76,"start"],["Corpus Christi",-97.4,27.8,"start"],["Lubbock",-101.86,33.58,"middle"],["Amarillo",-101.83,35.22,"middle"],["McAllen",-98.23,26.2,"end"],["Laredo",-99.51,27.51,"end"],["Midland",-102.08,32,"end"],["Beaumont",-94.1,30.08,"start"],["Waco",-97.15,31.55,"start"]];
 function labels(){
   const svg=d3.select("#map");svg.selectAll("#lab").remove();
@@ -178,16 +179,19 @@ function labels(){
     g.append("circle").attr("cx",p[0]).attr("cy",p[1]).attr("r",2).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",.8);
     g.append("text").attr("x",p[0]+dx).attr("y",p[1]+dy).attr("text-anchor",c[3]).attr("font-size",11).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3).attr("paint-order","stroke").text(c[0])}}
   function paint(){
-  d3.selectAll("#map path").attr("fill",f=>mode==="vl"?(D[f.properties.NAME]?"#e3e7ec":"#c9ced6"):col(f.properties.NAME));
+  d3.selectAll("#map path").attr("fill",f=>mode==="vl"||mode==="ar"?(D[f.properties.NAME]?"#e3e7ec":"#c9ced6"):col(f.properties.NAME));
   el("bR").setAttribute("aria-pressed",mode==="r18");
   el("bS").setAttribute("aria-pressed",mode==="sw");
   el("bV").setAttribute("aria-pressed",mode==="vl");
   el("bT").setAttribute("aria-pressed",mode==="r26");
-  const sc={r18:60,sw:20,vl:30,r26:40}[mode];
+  el("bA").setAttribute("aria-pressed",mode==="ar");
+  const sc={r18:60,sw:20,vl:30,r26:40,ar:20}[mode];
   el("l1").textContent="R+"+sc;el("l2").textContent="D+"+sc;
-  el("vcap").textContent=mode==="vl"?"Circle area = estimated votes left in each county. Color = current margin. Pale blue-grey circles have no votes counted yet.":"";
-  bubbles();labels();}
-let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},LASTCHK=null,LASTCHKT=0,LASTST={};
+  el("l1").parentNode.hidden=mode==="ar";
+  el("vcap").textContent=mode==="vl"?"Circle area = estimated votes left in each county. Color = current margin. Pale blue-grey circles have no votes counted yet.":mode==="ar"?"Arrows show the shift in margin since "+C.yr+": blue points left toward Democrats, red points right toward Republicans, and a longer arrow means a bigger shift (the longest is 20 points or more). A county gets an arrow once at least 25% of its expected vote is counted.":"";
+  bubbles();arrows();labels();
+}
+  let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},LASTCHK=null,LASTCHKT=0,LASTST={};
 const KEYC=["Harris","Dallas","Tarrant","Bexar","Travis","Collin","Fort Bend","Williamson","El Paso","Montgomery","Hidalgo","Cameron","Angelina","Potter","Gillespie"];
 function keyPanel(){
   const fc=x=>x==null?"–":"<span class=\""+(x>=0?"d":"r")+"\">"+fm(x)+"</span>";
@@ -379,7 +383,7 @@ el("bR").onclick=()=>{picked=true;mode="r18";paint()};
 el("bS").onclick=()=>{picked=true;mode="sw";paint()};
 el("bV").onclick=()=>{picked=true;mode="vl";paint()};
 el("bT").onclick=()=>{picked=true;mode="r26";paint()};
-el("tS").onclick=()=>tab("sen");
+el("bA").onclick=()=>{picked=true;mode="ar";paint()};el("tS").onclick=()=>tab("sen");
 el("tG").onclick=()=>tab("gov");
 el("q").oninput=table;
 el("grp").onchange=table;

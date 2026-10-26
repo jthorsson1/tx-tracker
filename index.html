@@ -171,25 +171,31 @@ function tip(e,n){
   function arrows(){
   const svg=d3.select("#map");svg.selectAll("#arr").remove();
   if(mode!=="ar"||!GEO.f)return;
-  const g=svg.append("g").attr("id","arr").style("pointer-events","none");
+  const g=svg.append("g").attr("id","arr").style("pointer-events","none"),items=[];
   for(const f of GEO.f){
     const n=f.properties.NAME;
     if(!D[n]||!vOf(n))continue;
     const o=left(n),s=sw(n);
     if(s==null||o.cv/o.ev<0.25)continue;
     const c=GEO.path.centroid(f);if(isNaN(c[0]))continue;
-    const len=Math.max(6,Math.min(Math.abs(s),20)/20*36),dx=s>=0?-1:1,clr=s>=0?"#2166ac":"#b2182b";
-    const tx=c[0]+dx*len/2,hx=tx-dx*5;
-    g.append("line").attr("x1",c[0]-dx*len/2).attr("x2",hx).attr("y1",c[1]).attr("y2",c[1]).attr("stroke",clr).attr("stroke-width",2).attr("stroke-linecap","round");
-    g.append("polygon").attr("points",tx+","+c[1]+" "+hx+","+(c[1]-3.5)+" "+hx+","+(c[1]+3.5)).attr("fill",clr)}}  const CITIES=[["Houston",-95.37,29.76,"start"],["Dallas",-96.8,32.78,"start"],["Fort Worth",-97.33,32.76,"end"],["San Antonio",-98.49,29.42,"end"],["Austin",-97.74,30.27,"end"],["El Paso",-106.49,31.76,"start"],["Corpus Christi",-97.4,27.8,"start"],["Lubbock",-101.86,33.58,"middle"],["Amarillo",-101.83,35.22,"middle"],["McAllen",-98.23,26.2,"end"],["Laredo",-99.51,27.51,"end"],["Midland",-102.08,32,"end"],["Beaumont",-94.1,30.08,"start"],["Waco",-97.15,31.55,"start"]];
+    items.push({c:c,s:s,len:Math.max(7,Math.min(Math.abs(s),20)/20*26)})}
+  items.sort((a,b)=>b.len-a.len);
+  for(const a of items){
+    const dx=a.s>=0?-1:1,clr=a.s>=0?"#2166ac":"#b2182b",x0=a.c[0],y=a.c[1],x1=x0+dx*a.len,hx=x1-dx*6;
+    g.append("line").attr("x1",x0).attr("x2",hx).attr("y1",y).attr("y2",y).attr("stroke","#fff").attr("stroke-width",5).attr("stroke-linecap","round");
+    g.append("polygon").attr("points",x1+","+y+" "+hx+","+(y-5)+" "+hx+","+(y+5)).attr("fill","#fff").attr("stroke","#fff").attr("stroke-width",2).attr("stroke-linejoin","round");
+    g.append("line").attr("x1",x0).attr("x2",hx).attr("y1",y).attr("y2",y).attr("stroke",clr).attr("stroke-width",2.4).attr("stroke-linecap","round");
+    g.append("polygon").attr("points",x1+","+y+" "+hx+","+(y-4)+" "+hx+","+(y+4)).attr("fill",clr);
+    g.append("circle").attr("cx",x0).attr("cy",y).attr("r",2.6).attr("fill",clr).attr("stroke","#fff").attr("stroke-width",1)}}
+  const CITIES=[["Houston",-95.37,29.76,"start"],["Dallas",-96.8,32.78,"start"],["Fort Worth",-97.33,32.76,"end"],["San Antonio",-98.49,29.42,"end"],["Austin",-97.74,30.27,"end"],["El Paso",-106.49,31.76,"start"],["Corpus Christi",-97.4,27.8,"start"],["Lubbock",-101.86,33.58,"middle"],["Amarillo",-101.83,35.22,"middle"],["McAllen",-98.23,26.2,"end"],["Laredo",-99.51,27.51,"end"],["Midland",-102.08,32,"end"],["Beaumont",-94.1,30.08,"start"],["Waco",-97.15,31.55,"start"]];
 function labels(){
   const svg=d3.select("#map");svg.selectAll("#lab").remove();
   if(!GEO.proj)return;
   const g=svg.append("g").attr("id","lab").style("pointer-events","none");
   for(const c of CITIES){const p=GEO.proj([c[1],c[2]]);if(!p)continue;
     const dx=c[3]==="start"?5:c[3]==="end"?-5:0,dy=c[3]==="middle"?-6:3;
-    g.append("circle").attr("cx",p[0]).attr("cy",p[1]).attr("r",2).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",.8);
-    g.append("text").attr("x",p[0]+dx).attr("y",p[1]+dy).attr("text-anchor",c[3]).attr("font-size",11).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3).attr("paint-order","stroke").text(c[0])}}
+        if(mode!=="ar")g.append("circle").attr("cx",p[0]).attr("cy",p[1]).attr("r",2).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",.8);
+        g.append("text").attr("x",p[0]+dx).attr("y",p[1]+dy).attr("text-anchor",c[3]).attr("font-size",11).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3).attr("paint-order","stroke").text(c[0])}}
   function paint(){
   d3.selectAll("#map path").attr("fill",f=>mode==="vl"||mode==="ar"?(D[f.properties.NAME]?"#e3e7ec":"#c9ced6"):col(f.properties.NAME));
   el("bR").setAttribute("aria-pressed",mode==="r18");

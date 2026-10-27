@@ -50,6 +50,20 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 .tools input,.tools select{padding:8px 10px;font:inherit;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px}
 #tmore{margin:8px 0 16px;padding:9px 14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;font:inherit;cursor:pointer}
   #chgbar{margin:0 0 10px;padding:8px 12px;background:var(--panel);border-left:4px solid #2166ac;font-size:14px}
+.ct{display:flex;flex-direction:column;gap:2px}
+.cm{overflow:hidden;width:100%;min-width:0;white-space:nowrap;cursor:pointer}
+.cr{display:inline-block;white-space:nowrap;animation:cscroll linear infinite}
+.cr span.cp{display:inline-block;padding-right:2em}
+@keyframes cscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.cm:hover .cr,.cm.pz .cr{animation-play-state:paused}
+.ci[data-n]{cursor:pointer}.ci[data-n]:hover b{text-decoration:underline}
+.ci small{color:var(--mute)}.cs{margin:0 .6em;color:var(--mute)}
+.up{color:#2166ac;font-weight:600}.dn{color:#b2182b;font-weight:600}
+.nw{border-radius:3px;padding:0 3px;animation:cflash 1.6s ease-out}.nw.up{--fl:rgba(33,102,172,.28)}.nw.dn{--fl:rgba(178,24,43,.26)}
+@keyframes cflash{0%,35%{background:var(--fl)}100%{background:transparent}}
+.cb{background:none;border:0;color:inherit;text-decoration:underline;font:inherit;cursor:pointer;padding:0 0 0 6px}
+#cfull{max-height:180px;overflow-y:auto;margin-top:6px;border-top:1px solid var(--line);padding-top:6px}#cfull div{padding:1px 0}
+@media (prefers-reduced-motion:reduce){.cr{animation:none}.nw{animation:none}.cm{white-space:normal;overflow:visible}.cr span.cp+span.cp{display:none}}
 tr.chg td{background:rgba(33,102,172,.18)}
 #stat{display:inline-block;margin:0 0 12px;padding:6px 12px;border-radius:999px;font-size:13px;background:var(--panel);border:1px solid var(--line);color:var(--mute)}
 #stat.warn{border-color:#b7791f;color:#b7791f}
@@ -259,7 +273,7 @@ function labels(){
   el("vcap").textContent=mode==="vl"?"Circle area = estimated votes left in each county. Color = current margin. Pale blue-grey circles have no votes counted yet.":mode==="ar"?"Arrows show the shift in margin since "+C.yr+": blue points left toward Democrats, red points right toward Republicans, and a longer arrow means a bigger shift (the longest is 20 points or more). A county gets an arrow once at least 25% of its expected vote is counted.":"";
   bubbles();arrows();labels();keyMap();
 }
-  let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},LASTCHK=null,LASTCHKT=0,LASTST={};
+  let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},CHGV={sen:{},gov:{}},CHGMODE="ticker",CHGOPEN=false,CHGSIG="",LASTCHK=null,LASTCHKT=0,LASTST={};
   const kcol=n=>{const x=hasVotes()&&m26(n)!=null?m26(n):m18(n);return x==null?"#c9ced6":d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/40))/2)};
 let KSEL=null,KK=1;
 function kcardHtml(n){const o=left(n),v=vOf(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);return "<b>"+n+" County</b><br>"+C.yr+": "+fm(m18(n))+(D[n]?vbar(D[n][1],D[n][0]):"")+(v?"2026: "+fm(m26(n))+" · swing "+fm(sw(n))+vbar(v[0],v[1])+"About "+p+"% of expected vote counted":"<br>2026: no votes entered yet")}
@@ -571,13 +585,33 @@ function statusText(j){
   if(j.updated)t+="Votes last changed "+j.updated+".";
   return t;
 }
-function snap(v){const o={};for(const n of Object.keys(v))if(n!=="Statewide")o[n]=v[n][0]+v[n][1];return o}
+function snap(v){const o={};for(const n of Object.keys(v))if(n!=="Statewide")o[n]=[v[n][0],v[n][1]];return o}
 function chgBanner(){
-  const b=el("chgbar"),now=Date.now(),names=Object.keys(CHG[K]).filter(n=>now-CHG[K][n]<180000);
-  if(!names.length){b.hidden=true;return}
-  names.sort((a,c)=>CHG[K][c]-CHG[K][a]);
-  b.hidden=false;
-  b.textContent="Just updated: "+names.slice(0,6).join(", ")+(names.length>6?" and "+(names.length-6)+" more":"")}
+  const b=el("chgbar"),now=Date.now(),V=CHGV[K],f=x=>x.toLocaleString();
+  const names=Object.keys(V).filter(n=>now-V[n].t<180000).sort((x,y)=>(V[y].d+V[y].r)-(V[x].d+V[x].r)||V[y].t-V[x].t);
+  const sig=K+"|"+CHGMODE+"|"+CHGOPEN+"|"+names.map(n=>n+V[n].d+"/"+V[n].r+V[n].fix).join(",");
+  if(sig===CHGSIG)return;
+  CHGSIG=sig;
+  if(!names.length){b.hidden=true;b.innerHTML="";return}
+  const mgf=x=>{const v=Math.round(Math.abs(x)*10)/10;return v===0?"Even":(x>0?"D+":"R+")+v.toFixed(1)};
+  const item=n=>{const x=V[n];if(x.fix)return "<span class=\"ci\" data-n=\""+n+"\"><b>"+n+"</b> corrected</span>";
+    const df=x.from==null?0:x.to-x.from,cls=x.to>=0?"up":"dn",mv=x.from==null||Math.abs(df)<.05?"":(df>0?"<span class=\"up\"> &#9650; "+Math.abs(df).toFixed(1)+"</span>":"<span class=\"dn\"> &#9660; "+Math.abs(df).toFixed(1)+"</span>");
+    return "<span class=\"ci\" data-n=\""+n+"\"><b>"+n+"</b> +"+f(x.d+x.r)+" votes <small>&middot; "+(x.from==null?"first votes":mgf(x.from))+" &rarr; </small><span class=\"nw "+cls+"\">"+mgf(x.to)+"</span>"+mv+"</span>"};
+  const added=names.reduce((s,n)=>s+(V[n].fix?0:V[n].d+V[n].r),0),N=names.length;
+  const head="<b>Just updated:</b> "+N+(N===1?" county":" counties")+(added>0?", +"+f(added)+" votes":"")+". ";
+  let h;
+  if(CHGMODE==="ticker"){
+    const one=names.slice(0,12).map(item).join("<span class=\"cs\">&middot;</span>")+(N>12?"<span class=\"cs\">&middot;</span><span class=\"ci\">and "+(N-12)+" more</span>":""),dur=Math.max(20,Math.round(one.replace(/<[^>]*>/g,"").length/8));
+    h="<div class=\"ct\"><div>"+head+"</div><div class=\"cm\" title=\"Hover or tap to pause\"><div class=\"cr\" style=\"animation-duration:"+dur+"s\"><span class=\"cp\">"+one+"</span><span class=\"cp\" aria-hidden=\"true\">"+one+"</span></div></div></div>";
+    if(N>1)h+="<button class=\"cb\" id=\"cshow\">"+(CHGOPEN?"Hide list":"Show all "+N)+"</button>";
+  }else{
+    h=head+names.slice(0,4).map(item).join("<span class=\"cs\">&middot;</span>")+(N>4?" and "+(N-4)+" more.":"");
+    if(N>4)h+="<button class=\"cb\" id=\"cshow\">"+(CHGOPEN?"Hide list":"Show all "+N)+"</button>";
+  }
+  if(CHGOPEN&&N>1)h+="<div id=\"cfull\">"+names.map(n=>"<div>"+item(n)+"</div>").join("")+"</div>";
+  b.innerHTML=h;b.hidden=false;
+  b.onclick=e=>{if(e.target.id==="cshow"){CHGOPEN=!CHGOPEN;CHGSIG="";chgBanner();return}const it=e.target.closest(".ci[data-n]");if(it){const n=it.dataset.n;show(n);kzoom(n);mzoom(n);const m=b.querySelector(".cm");if(m)m.classList.add("pz");return}const m=e.target.closest(".cm");if(m)m.classList.toggle("pz")};
+}
 function statPill(){
   const p=el("stat"),st=LASTST;
   if(LASTCHK===null||(!LASTCHK&&!st.manual)){p.hidden=true;return}
@@ -592,7 +626,7 @@ function statPill(){
 function loadVotes(){return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(j=>{
   VOTES.sen=rekey(j.senate||{},SEN);VOTES.gov=rekey(j.governor||{},GOV);
   const now=Date.now(),ns={sen:snap(VOTES.sen),gov:snap(VOTES.gov)};
-  if(PSNAP)for(const k of ["sen","gov"])for(const n of Object.keys(ns[k]))if(ns[k][n]!==(PSNAP[k][n]||0))CHG[k][n]=now;
+  if(PSNAP)for(const k of ["sen","gov"])for(const n of Object.keys(ns[k])){const a=ns[k][n],b=PSNAP[k][n]||[0,0];if(a[0]+a[1]!==b[0]+b[1]){CHG[k][n]=now;const dd=a[0]-b[0],dr=a[1]-b[1],o=CHGV[k][n],keep=o&&now-o.t<180000&&!o.fix;const mb=b[0]+b[1]>0?(b[0]-b[1])/(b[0]+b[1])*100:null,ma=(a[0]-a[1])/(a[0]+a[1])*100;CHGV[k][n]=dd+dr<0?{t:now,d:0,r:0,fix:true,from:null,to:ma}:{t:now,d:(keep?o.d:0)+dd,r:(keep?o.r:0)+dr,fix:false,from:keep?o.from:mb,to:ma}}}
   PSNAP=ns;
   const s=j.status||{},c=s.checked||"";
   if(c!==LASTCHK){LASTCHK=c;LASTCHKT=Date.now()}

@@ -85,7 +85,7 @@ details.guide summary{cursor:pointer;padding:10px 12px;font-weight:600}
 details.guide .gb{padding:0 12px 6px;font-size:14px}
 details.guide .gb p{margin:0 0 8px}
 .kmwrap{position:relative}
-#kmrst{position:absolute;top:6px;right:6px;padding:4px 10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:13px system-ui;cursor:pointer}
+#kmrst,#mrst{position:absolute;top:6px;right:6px;padding:4px 10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:13px system-ui;cursor:pointer}
 .kcard{margin-top:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);font-size:14px;min-height:56px}
 .kcard b{font:600 15px Georgia,serif}
 </style>
@@ -128,7 +128,7 @@ details.guide .gb p{margin:0 0 8px}
 <div id="chgbar" hidden></div>
 <div class="mapkey">
 <div>
-<svg id="map" viewBox="0 0 600 560" role="img" aria-label="Map of Texas counties"></svg>
+<div class="kmwrap"><svg id="map" viewBox="0 0 600 560" role="img" aria-label="Map of Texas counties"></svg><button id="mrst" hidden>Reset</button></div>
 <div id="msg">Loading map...</div>
 <div class="leg"><span id="l1"></span><i></i><span id="l2"></span></div>
 <p class="note" id="vcap"></p>
@@ -242,8 +242,8 @@ function labels(){
   const g=svg.append("g").attr("id","lab").style("pointer-events","none");
   for(const c of CITIES){const p=GEO.proj([c[1],c[2]]);if(!p)continue;
     const dx=c[3]==="start"?5:c[3]==="end"?-5:0,dy=c[3]==="middle"?-6:3;
-        if(mode!=="ar")g.append("circle").attr("cx",p[0]).attr("cy",p[1]).attr("r",2).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",.8);
-        g.append("text").attr("x",p[0]+dx).attr("y",p[1]+dy).attr("text-anchor",c[3]).attr("font-size",11).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3).attr("paint-order","stroke").text(c[0])}}
+        if(mode!=="ar")g.append("circle").attr("cx",p[0]).attr("cy",p[1]).attr("r",2/MK).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",.8/MK);
+        g.append("text").attr("x",p[0]+dx).attr("y",p[1]+dy).attr("text-anchor",c[3]).attr("font-size",11/MK).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3/MK).attr("paint-order","stroke").text(c[0])}}
   function paint(){
   d3.selectAll("#map path").attr("fill",f=>mode==="vl"||mode==="ar"?(D[f.properties.NAME]?"#e3e7ec":"#c9ced6"):col(f.properties.NAME));
   el("bR").setAttribute("aria-pressed",mode==="r18");
@@ -261,11 +261,24 @@ function labels(){
   const kcol=n=>{const x=hasVotes()&&m26(n)!=null?m26(n):m18(n);return x==null?"#c9ced6":d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/40))/2)};
 let KSEL=null,KK=1;
 function kcardHtml(n){const o=left(n),v=vOf(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);return "<b>"+n+" County</b><br>"+C.yr+": "+fm(m18(n))+(D[n]?vbar(D[n][1],D[n][0]):"")+(v?"2026: "+fm(m26(n))+" · swing "+fm(sw(n))+vbar(v[0],v[1])+"About "+p+"% of expected vote counted":"<br>2026: no votes entered yet")}
+let MK=1;
+function mzoom(n){
+  MK=1;
+  const f=n&&GEO.f&&GEO.f.find(x=>x.properties.NAME===n);
+  let vb="0 0 600 560";
+  if(f){const b=GEO.path.bounds(f),w=b[1][0]-b[0][0],h=b[1][1]-b[0][1];
+    MK=Math.max(1,Math.min(4,0.3*Math.min(600/w,560/h)));
+    const vw=600/MK,vh=560/MK,x=Math.max(0,Math.min(600-vw,(b[0][0]+b[1][0])/2-vw/2)),y=Math.max(0,Math.min(560-vh,(b[0][1]+b[1][1])/2-vh/2));
+    vb=x+" "+y+" "+vw+" "+vh}
+  el("map").setAttribute("viewBox",vb);
+  el("mrst").hidden=!f;
+  labels();
+}
 function ring(n){
   const is=f=>f&&f.properties&&f.properties.NAME===n;
-  d3.selectAll("#map path").style("stroke",f=>is(f)?"#000":null).style("stroke-width",f=>is(f)?6:null);
+  d3.selectAll("#map path").style("stroke",f=>is(f)?"#000":null).style("stroke-width",f=>is(f)?4:null).style("vector-effect",f=>is(f)?"non-scaling-stroke":null);
 }
-function kzoom(n){
+  function kzoom(n){
   KSEL=n;KK=1; ring(n);
   const f=n&&GEO.f&&GEO.f.find(x=>x.properties.NAME===n);
   let vb="0 0 600 560";
@@ -527,7 +540,7 @@ el("eCopy").onclick=()=>{
   const done=()=>{el("eMsg").textContent="Copied "+names.length+" counties."};
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(line).then(done,()=>window.prompt("Copy this line:",line));
   else window.prompt("Copy this line:",line)};
-el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr){show(tr.dataset.n);kzoom(tr.dataset.n)}};
+el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr){show(tr.dataset.n);kzoom(tr.dataset.n);mzoom(tr.dataset.n)}};
 el("bR").onclick=()=>{picked=true;mode="r18";paint()};
 el("bS").onclick=()=>{picked=true;mode="sw";paint()};
 el("bV").onclick=()=>{picked=true;mode="vl";paint()};
@@ -538,8 +551,8 @@ el("q").oninput=table;
 el("grp").onchange=table;
 el("tmore").onclick=()=>{SHOWALL=!SHOWALL;table()};
 el("key").onclick=e=>{const tr=e.target.closest("tr");if(tr&&tr.dataset.n){show(tr.dataset.n);kzoom(tr.dataset.n)}};
-el("kmrst").onclick=()=>kzoom(null);  
-setRace("sen");
+el("kmrst").onclick=el("mrst").onclick=()=>{kzoom(null);mzoom(null)};
+  setRace("sen");
 function statusText(j){
   const s=j.status||{};let t="";
   if(s.mode==="rehearsal")t+="REHEARSAL: March primary data, not the real race. ";

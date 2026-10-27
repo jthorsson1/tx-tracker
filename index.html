@@ -87,6 +87,7 @@ details.guide .gb p{margin:0 0 8px}
 .kmwrap{position:relative}
 #kmrst,#mrst{position:absolute;top:6px;right:6px;padding:4px 10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:13px system-ui;cursor:pointer}
 .kcard{margin-top:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);font-size:14px;min-height:56px}
+.rl{margin:8px 0;font-size:13px}.rl div{display:flex;justify-content:space-between;gap:8px;padding:2px 6px;border-left:4px solid transparent}.rl .on{background:var(--panel);border-left-color:var(--ink);font-weight:600}
 .kcard b{font:600 15px Georgia,serif}
 </style>
 </head>
@@ -110,6 +111,7 @@ details.guide .gb p{margin:0 0 8px}
 <p><b>Vote left.</b> How much of each county's expected vote has not been counted yet. A county with little counted can still change a lot.</p>
 <p><b>Shift arrows.</b> The same swing as arrows. Blue arrows point toward Democrats, red toward Republicans, and longer means a bigger shift. Counties with too little counted are left blank.</p>
 <p><b>Key counties.</b> The 15 counties that carry the most weight or tend to signal where the night is heading.</p>
+<p><b>Model rating.</b> Under the gauge, the ladder turns the chance to win into a label: Toss-up (under 55%), Tilt (55% to 60%), Lean (60% to 80%), Likely (80% to 95%) and Safe (95% or more). Lean, Likely and Safe use the cutoffs one published forecast uses; Tilt is this page's own. The label describes this model only. It is not a call. Before 20% of the expected vote is counted it says "Too early to rate," and Safe is held back until half is counted.</p>
 <p><b>This race vs last time.</b> The scale under the Key counties table compares this race with the last one. The circle is the final margin of the comparison race (2018 or 2022). The triangle is the margin among the votes counted so far. The diamond is the projected final, and the shaded box around it is the 80% range. Early in the night the triangle and the diamond can sit on opposite sides of even, because the first votes reported often come from counties that lean one way. The projection adjusts for the vote still out.</p>
 <p><b>Night chart.</b> The chart below "This race vs last time" shows how the projected final margin has moved since polls closed. The line is the model's projection at each saved snapshot, taken about every 15 minutes. The shaded band is the 80% range, and it narrows as more vote is counted. The dashed line is the final margin of the comparison race, so you can see whether the night is running ahead of or behind it. It appears once at least two snapshots with votes have been saved. Times are Central.</p>
 <p><b>Estimates.</b> For most counties outside the 45 with exact past totals, the 2022 results are estimates.</p>
@@ -482,10 +484,18 @@ function scoreboard(){
     "<text x=\"2\" y=\"16\" font-size=\"10\" fill=\"currentColor\">D+15</text><text x=\"2\" y=\"296\" font-size=\"10\" fill=\"currentColor\">R+15</text><text x=\"0\" y=\"154\" font-size=\"10\" fill=\"currentColor\">even</text></svg>"+
     "<div class=\"nt\"><div class=\"big\">"+lead+" +"+Math.abs(p.M).toFixed(1)+"</div>"+
     "<p>"+C.d26+" "+(p.chance*100).toFixed(0)+"% &middot; "+C.r26+" "+((1-p.chance)*100).toFixed(0)+"% chance to win</p>"+
-    "<p>80% range: "+sg(lo)+" to "+sg(hi)+"</p>"+
+    "<p>80% range: "+sg(lo)+" to "+sg(hi)+"</p>"+ratingHtml(p)+
     "<p>"+(p.f*100).toFixed(0)+"% of expected vote counted &middot; "+p.k+" counties reporting</p>"+
     "<p class=\"note\">Built from each county's swing since "+C.yr+", plus the rest of the state. Early-night numbers are rough.</p></div>";
 }
+function ratingHtml(p){
+  const lead=p.chance>=.5?C.d26:C.r26,w=Math.max(p.chance,1-p.chance);
+  const R=[["Safe","95% or more"],["Likely","80% to 95%"],["Lean","60% to 80%"],["Tilt","55% to 60%"],["Toss-up","under 55%"]];
+  let i=-1;
+  if(p.f>=0.2){i=w>=.95?0:w>=.8?1:w>=.6?2:w>=.55?3:4;if(p.f<0.5)i=Math.max(i,1)}
+  const head=i<0?"Too early to rate":i===4?"Toss-up":R[i][0]+" "+lead;
+  return "<div class=\"rl\"><div><b>Model rating: "+head+"</b></div>"+R.map((r,j)=>"<div"+(j===i?" class=\"on\"":"")+"><span>"+r[0]+"</span><span>"+r[1]+"</span></div>").join("")+"</div>"+
+    "<p class=\"note\">The rating follows the leading candidate's chance to win. It is this model's read, not an official call. Safe is not used until half the expected vote is counted.</p>"}
 // Early vote: [county, group, 2022 total early ballots, 2018 total early ballots (0=none)]
 const EV=[["Bastrop","S",19645,0],["Bell","M",57308,57997],["Bexar","U",385456,414192],["Bowie","M",15548,0],["Brazoria","S",80552,88844],["Brazos","M",37452,42052],["Cameron","B",53786,54576],["Collin","S",262824,286393],["Comal","S",53325,48483],["Dallas","U",408845,529727],["Denton","S",226738,228650],["Ector","M",14671,0],["El Paso","B",102701,139105],["Ellis","S",45184,45163],["Fort Bend","S",184846,199267],["Galveston","S",80998,90166],["Grayson","M",29124,0],["Gregg","M",23244,0],["Guadalupe","S",38713,39782],["Harris","U",743838,855711],["Hays","S",65211,62583],["Henderson","S",17866,0],["Hidalgo","B",101247,114560],["Hood","S",17864,0],["Hunt","S",14528,0],["Jefferson","M",47128,58775],["Johnson","S",37179,38667],["Kaufman","S",26781,0],["Lubbock","M",59492,71075],["McLennan","M",44891,50444],["Midland","M",26123,0],["Montgomery","S",139397,138125],["Nueces","B",61069,67630],["Parker","S",42263,40750],["Randall","M",32848,36214],["Rockwall","S",30123,0],["Smith","M",51304,55845],["Tarrant","U",407050,465817],["Taylor","M",26245,0],["Tom Green","M",20475,0],["Travis","U",327024,368048],["Webb","B",29397,33519],["Wichita","M",20950,0],["Williamson","S",162486,162574],["Wise","S",17361,0],["Angelina","R",15394,0],["Cherokee","R",8793,0],["Harrison","R",14408,0],["Nacogdoches","R",11864,0],["Polk","R",11653,0],["Van Zandt","R",10130,0],["Walker","R",11487,0],["Wood","R",10745,0],["Liberty","S",13199,0],["Waller","S",11386,0],["Medina","S",12216,0],["Gillespie","R",8304,0],["Blanco","R",4832,0],["Potter","M",13548,0],["Maverick","B",6893,0],["Val Verde","B",6667,0],["Starr","B",9122,0],["Zapata","B",2702,0],["Zavala","B",1337,0],["Dimmit","B",1583,0],["Kleberg","B",4824,0]];const GN={U:"Big urban",S:"Suburban/exurban",M:"Small metro",R:"Rural",B:"Border/Hispanic-heavy"};
   let EARLY={day:0,counties:{}},eyr=2022,EDITM=location.hash==="#edit",EDIT=null;

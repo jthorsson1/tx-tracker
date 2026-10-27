@@ -68,6 +68,9 @@ tr.chg td{background:rgba(33,102,172,.18)}
 #vs table{min-width:0}
 .top>div+div{display:flex;flex-direction:column}
 #vs{flex:1}
+#vlt{margin-top:16px;padding:12px;background:var(--panel);border:1px solid var(--line)}
+#vlt h3{margin:0 0 6px;font:600 16px/1.2 Georgia,serif}
+svg.stripsvg{border:0;background:none}
 @media (max-width:520px){.top{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:700px){#key th,#key td,#vs th,#vs td{padding:4px 4px;font-size:13px}.kbar{width:34px}}
 #vs,#key{overflow-x:auto}
@@ -128,7 +131,10 @@ details.guide .gb p{margin:0 0 8px}
 <div class="kmwrap"><svg id="map2" viewBox="0 0 600 560" role="img" aria-label="Map of the key counties"></svg><button id="kmrst" hidden>Reset</button></div>
 <div class="kcard" id="kcard">Click a county in the Key counties table to zoom in.</div>
 </div>
+<div>
 <div id="key"><h3>Key counties</h3><p class="note">The key counties will appear here.</p></div>
+<div id="vlt"></div>
+</div>
 </div>
 <p class="note" id="cov"></p>
 <div class="tools"><input id="q" type="search" placeholder="Search a county" autocomplete="off"><select id="grp"><option value="">All counties</option><option value="U">Big urban</option><option value="S">Suburban/exurban</option><option value="M">Small metro</option><option value="R">Rural</option><option value="B">Border/Hispanic-heavy</option></select><span class="note" id="tcount"></span></div>
@@ -277,7 +283,29 @@ function keyMap(){
   el("kcard").innerHTML=KSEL?kcardHtml(KSEL):"Click a county in the Key counties table to zoom in.";
 }
   const KEYC=["Harris","Dallas","Tarrant","Bexar","Travis","Collin","Fort Bend","Williamson","El Paso","Montgomery","Hidalgo","Cameron","Angelina","Potter","Gillespie"];
-function keyPanel(){
+function stripBox(){
+  const box=el("vlt"),V=VOTES[K];
+  let cd=0,cr=0;
+  for(const n of Object.keys(V)){if(n==="Statewide")continue;cd+=V[n][0];cr+=V[n][1]}
+  const st=V.Statewide;
+  if(st&&st[0]>=cd&&st[1]>=cr){cd=st[0];cr=st[1]}
+  const p=project(C,V,TURN[K]),past=(C.sD-C.sR)/(C.sD+C.sR)*100,now=cd+cr>0?(cd-cr)/(cd+cr)*100:null;
+  const X=m=>150+Math.max(-15,Math.min(15,m))*8.667,f=x=>(x>=0?"D+":"R+")+Math.abs(x).toFixed(1),mu="fill:var(--mute)";
+  let s="<svg class=\"stripsvg\" viewBox=\"0 0 300 104\" role=\"img\" aria-label=\"Margin scale comparing the final margin of the last race with the current and projected margin\">";
+  if(p){const lo=p.M-1.2816*p.sd,hi=p.M+1.2816*p.sd;s+="<rect x=\""+X(lo)+"\" y=\"44\" width=\""+(X(hi)-X(lo))+"\" height=\"18\" fill=\"currentColor\" opacity=\".16\"/>"}
+  s+="<line x1=\"20\" x2=\"280\" y1=\"53\" y2=\"53\" style=\"stroke:var(--mute)\" stroke-width=\"1.5\"/>";
+  for(const t of [-15,-10,-5,0,5,10,15])s+="<line x1=\""+X(t)+"\" x2=\""+X(t)+"\" y1=\""+(t===0?40:49)+"\" y2=\""+(t===0?66:57)+"\" style=\"stroke:var(--mute)\"/><text x=\""+X(t)+"\" y=\"80\" text-anchor=\"middle\" font-size=\"9\" style=\""+mu+"\">"+(t===0?"even":(t<0?"R":"D")+Math.abs(t))+"</text>";
+  const mk=[{x:X(past),t:C.yr+" final "+f(past),k:"past"}];
+  if(p)mk.push({x:X(p.M),t:"Projected "+f(p.M),k:"proj"});
+  mk.sort((a,b)=>a.x-b.x);
+  mk.forEach((o,i)=>{
+    let end=mk.length>1?i===0:o.x>=150;if(end&&o.x<85)end=false;if(!end&&o.x>215)end=true;
+    s+="<text x=\""+(o.x+(end?-8:8))+"\" y=\"32\" text-anchor=\""+(end?"end":"start")+"\" font-size=\"10\" "+(o.k==="proj"?"fill=\"currentColor\"":"style=\""+mu+"\"")+">"+o.t+"</text>"});
+  s+="<circle cx=\""+X(past)+"\" cy=\"53\" r=\"5\" stroke-width=\"2\" style=\"fill:var(--panel);stroke:currentColor\"/>";
+  if(p)s+="<polygon points=\""+X(p.M)+",44 "+(X(p.M)+6)+",53 "+X(p.M)+",62 "+(X(p.M)-6)+",53\" fill=\"currentColor\"/>";
+  if(now!=null)s+="<path d=\"M"+X(now)+",60 l-5,9 h10z\" fill=\"currentColor\"/><text x=\""+Math.max(65,Math.min(235,X(now)))+"\" y=\"97\" text-anchor=\"middle\" font-size=\"10\" fill=\"currentColor\">Counted so far "+f(now)+"</text>";
+  box.innerHTML="<h3>This race vs last time</h3>"+s+"</svg><p class=\"note\" style=\"margin:4px 0 0\">"+(p?"Diamond: projected final, with the 80% range shaded. Triangle: counted so far. Circle: the "+C.yr+" final.":"The projection appears once county results are in. Circle: the "+C.yr+" final.")+"</p>"}
+  function keyPanel(){
   const fc=x=>x==null?"–":"<span class=\""+(x>=0?"d":"r")+"\">"+fm(x)+"</span>";
   const rows=KEYC.filter(n=>D[n]).map(n=>{
     const o=left(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);
@@ -390,7 +418,7 @@ function scoreboard(){
     h+="<br><br><b>Projected final share</b><br>"+C.d26+": "+pc(dS)+" &middot; "+C.r26+": "+pc(100-dS)+"<br>80% range for "+C.d26+": "+pc(dS-w)+" to "+pc(dS+w);}
   h+="<br><span class=\"note\">Two-party only. Third-party votes are not included, so real percentages will be a bit lower for both.</span>";
   box.innerHTML=h;
-}function needle(){scoreboard();voteShare();
+}function needle(){scoreboard();voteShare();stripBox();
   const box=el("ndl"),p=project(C,VOTES[K],TURN[K]);
   if(!p){box.innerHTML="<p class=\"note\">No votes counted yet. The gauge appears once county results are entered.</p>";return}
   const Y=m=>150-Math.max(-15,Math.min(15,m))*260/30,lo=p.M-1.2816*p.sd,hi=p.M+1.2816*p.sd,y=Y(p.M);

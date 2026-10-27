@@ -260,7 +260,7 @@ function labels(){
   let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},LASTCHK=null,LASTCHKT=0,LASTST={};
   const kcol=n=>{const x=hasVotes()&&m26(n)!=null?m26(n):m18(n);return x==null?"#c9ced6":d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/40))/2)};
 let KSEL=null,KK=1;
-function kcardHtml(n){const o=left(n),v=vOf(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);return "<b>"+n+" County</b><br>"+C.yr+": "+fm(m18(n))+(v?"<br>2026: "+fm(m26(n))+" · swing "+fm(sw(n))+"<br>About "+p+"% of expected vote counted":"<br>2026: no votes entered yet")}
+function kcardHtml(n){const o=left(n),v=vOf(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);return "<b>"+n+" County</b><br>"+C.yr+": "+fm(m18(n))+(D[n]?vbar(D[n][1],D[n][0]):"")+(v?"2026: "+fm(m26(n))+" · swing "+fm(sw(n))+vbar(v[0],v[1])+"About "+p+"% of expected vote counted":"<br>2026: no votes entered yet")}
 function kzoom(n){
   KSEL=n;KK=1;
   const f=n&&GEO.f&&GEO.f.find(x=>x.properties.NAME===n);

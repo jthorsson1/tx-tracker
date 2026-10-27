@@ -263,7 +263,7 @@ let KSEL=null,KK=1;
 function kcardHtml(n){const o=left(n),v=vOf(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);return "<b>"+n+" County</b><br>"+C.yr+": "+fm(m18(n))+(D[n]?vbar(D[n][1],D[n][0]):"")+(v?"2026: "+fm(m26(n))+" · swing "+fm(sw(n))+vbar(v[0],v[1])+"About "+p+"% of expected vote counted":"<br>2026: no votes entered yet")}
 function ring(n){
   const is=f=>f&&f.properties&&f.properties.NAME===n;
-  d3.selectAll("#map path").style("stroke",f=>is(f)?"#000":null).style("stroke-width",f=>is(f)?3:null);
+  d3.selectAll("#map path").style("stroke",f=>is(f)?"#000":null).style("stroke-width",f=>is(f)?6:null);
 }
 function kzoom(n){
   KSEL=n;KK=1; ring(n);

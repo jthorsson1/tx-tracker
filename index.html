@@ -243,6 +243,20 @@ function labels(){
 }
   let SHOWALL=false,PSNAP=null,CHG={sen:{},gov:{}},LASTCHK=null,LASTCHKT=0,LASTST={};
   const kcol=n=>{const x=hasVotes()&&m26(n)!=null?m26(n):m18(n);return x==null?"#c9ced6":d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/40))/2)};
+let KSEL=null,KK=1;
+function kcardHtml(n){const o=left(n),v=vOf(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);return "<b>"+n+" County</b><br>"+C.yr+": "+fm(m18(n))+(v?"<br>2026: "+fm(m26(n))+" · swing "+fm(sw(n))+"<br>About "+p+"% of expected vote counted":"<br>2026: no votes entered yet")}
+function kzoom(n){
+  KSEL=n;KK=1;
+  const f=n&&GEO.f&&GEO.f.find(x=>x.properties.NAME===n);
+  let vb="0 0 600 560";
+  if(f){const b=GEO.path.bounds(f),w=b[1][0]-b[0][0],h=b[1][1]-b[0][1];
+    KK=Math.min(8,0.45*Math.min(600/w,560/h));
+    const vw=600/KK,vh=560/KK,x=Math.max(0,Math.min(600-vw,(b[0][0]+b[1][0])/2-vw/2)),y=Math.max(0,Math.min(560-vh,(b[0][1]+b[1][1])/2-vh/2));
+    vb=x+" "+y+" "+vw+" "+vh}
+  el("map2").setAttribute("viewBox",vb);
+  el("kmrst").hidden=!f;
+  keyMap();
+}
 function keyMap(){
   if(!GEO.f)return;
   const key=new Set(KEYC.filter(n=>D[n])),isK=f=>key.has(f.properties.NAME);
@@ -250,11 +264,15 @@ function keyMap(){
     .style("fill",f=>isK(f)?kcol(f.properties.NAME):"var(--line)")
     .style("fill-opacity",f=>isK(f)?1:.35)
     .style("stroke",f=>isK(f)?"var(--ink)":"var(--bg)")
-    .style("stroke-width",f=>isK(f)?1:.3)
+    .style("stroke-width",f=>f.properties.NAME===KSEL?3:isK(f)?1:.3)
+    .style("vector-effect","non-scaling-stroke")
     .style("pointer-events",f=>isK(f)?"auto":"none")
-    .on("click",(e,f)=>show(f.properties.NAME))
+    .on("click",(e,f)=>{show(f.properties.NAME);kzoom(f.properties.NAME)})
     .on("mousemove",(e,f)=>tip(e,f.properties.NAME))
     .on("mouseleave",()=>{el("tip").hidden=true});
+  const lg=d3.select("#map2").selectAll("g.kl").data(KSEL?[0]:[]).join("g").attr("class","kl").style("pointer-events","none");
+  lg.selectAll("text").data(GEO.f.filter(isK)).join("text").attr("x",f=>GEO.path.centroid(f)[0]).attr("y",f=>GEO.path.centroid(f)[1]).attr("text-anchor","middle").attr("font-size",11/KK).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3/KK).attr("paint-order","stroke").text(f=>f.properties.NAME);
+  el("kcard").innerHTML=KSEL?kcardHtml(KSEL):"Click a county in the Key counties table to zoom in.";
 }
   const KEYC=["Harris","Dallas","Tarrant","Bexar","Travis","Collin","Fort Bend","Williamson","El Paso","Montgomery","Hidalgo","Cameron","Angelina","Potter","Gillespie"];
 function keyPanel(){
@@ -452,8 +470,8 @@ el("tG").onclick=()=>tab("gov");
 el("q").oninput=table;
 el("grp").onchange=table;
 el("tmore").onclick=()=>{SHOWALL=!SHOWALL;table()};
-el("key").onclick=e=>{const tr=e.target.closest("tr");if(tr&&tr.dataset.n)show(tr.dataset.n)};
-  
+el("key").onclick=e=>{const tr=e.target.closest("tr");if(tr&&tr.dataset.n){show(tr.dataset.n);kzoom(tr.dataset.n)}};
+el("kmrst").onclick=()=>kzoom(null);  
 setRace("sen");
 function statusText(j){
   const s=j.status||{};let t="";

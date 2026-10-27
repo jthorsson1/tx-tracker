@@ -45,6 +45,7 @@ svg.gauge{width:110px;height:300px;border:0;background:none;color:var(--ink)}
 .ebar i{position:absolute;top:2px;bottom:2px;border-radius:2px}
 #tip{position:fixed;z-index:10;pointer-events:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:260px}
 #tip small{color:var(--mute)}
+.vb{display:flex;height:8px;margin:3px 0 6px;background:#b2182b;border-radius:2px;overflow:hidden}.vb i{display:block;height:100%;background:#2166ac}
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
 .tools input,.tools select{padding:8px 10px;font:inherit;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px}
 #tmore{margin:8px 0 16px;padding:9px 14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;font:inherit;cursor:pointer}
@@ -195,21 +196,22 @@ function col(n){
   const s=mode==="r18"?60:mode==="r26"?40:20;
   return d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/s))/2);
 }
+function vbar(d,r){const t=d+r;return t?'<div class="vb"><i style="width:'+(d/t*100).toFixed(1)+'%"></i></div>':""}
 function show(n){
   SEL=n;
-  if(!D[n]){const u=vOf(n);el("info").innerHTML=u?"<b>"+n+" County</b><br>2026: "+C.d26+" "+u[0].toLocaleString()+", "+C.r26+" "+u[1].toLocaleString()+" ("+fm(m26(n))+")<br>No past result loaded for this county yet.":n+" County: no data yet.";return;}
+  if(!D[n]){const u=vOf(n);el("info").innerHTML=u?"<b>"+n+" County</b><br>2026: "+C.d26+" "+u[0].toLocaleString()+", "+C.r26+" "+u[1].toLocaleString()+" ("+fm(m26(n))+")"+vbar(u[0],u[1])+"No past result loaded for this county yet.":n+" County: no data yet.";return;}
   const v=vOf(n);
-  el("info").innerHTML="<b>"+n+" County</b><br>"+C.yr+": "+C.rn+" "+D[n][0].toLocaleString()+", "+C.dn+" "+D[n][1].toLocaleString()+" ("+fm(m18(n))+")"+
-        (v?"<br>2026: "+C.d26+" "+v[0].toLocaleString()+", "+C.r26+" "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")<br>About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"<br>2026: no votes entered yet");
+  el("info").innerHTML="<b>"+n+" County</b><br>"+C.yr+": "+C.rn+" "+D[n][0].toLocaleString()+", "+C.dn+" "+D[n][1].toLocaleString()+" ("+fm(m18(n))+")"+vbar(D[n][1],D[n][0])+
+        (v?"2026: "+C.d26+" "+v[0].toLocaleString()+", "+C.r26+" "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")"+vbar(v[0],v[1])+"About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"<br>2026: no votes entered yet");
 }
 function tipHtml(n){
   const v=vOf(n),p=D[n],f=x=>x.toLocaleString(),pc=(a,b)=>(a/(a+b)*100).toFixed(1)+"%";
   let h="<b>"+n+" County</b>";
-  if(v&&v[0]+v[1]>0)h+="<br>2026: "+C.d26+" "+f(v[0])+" ("+pc(v[0],v[1])+")<br>"+C.r26+" "+f(v[1])+" ("+pc(v[1],v[0])+")"+(p?"<br>About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"");
+  if(v&&v[0]+v[1]>0)h+="<br>2026: "+C.d26+" "+f(v[0])+" ("+pc(v[0],v[1])+")<br>"+C.r26+" "+f(v[1])+" ("+pc(v[1],v[0])+")"+vbar(v[0],v[1])+(p?"About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"");
   else h+="<br>2026: no votes entered yet";
-  if(p)h+="<br><br>"+C.yr+": "+C.dn+" "+f(p[1])+" ("+pc(p[1],p[0])+")<br>"+C.rn+" "+f(p[0])+" ("+pc(p[0],p[1])+")";
-  return h+"<br><small>Share of the two-party vote</small>"}
-function tip(e,n){
+  if(p)h+="<br><br>"+C.yr+": "+C.dn+" "+f(p[1])+" ("+pc(p[1],p[0])+")<br>"+C.rn+" "+f(p[0])+" ("+pc(p[0],p[1])+")"+vbar(p[1],p[0]);
+  return h+"<small>Share of the two-party vote</small>"}
+  function tip(e,n){
   const t=el("tip");
   t.innerHTML=tipHtml(n);t.hidden=false;
   t.style.left=Math.max(8,Math.min(e.clientX+14,innerWidth-t.offsetWidth-8))+"px";

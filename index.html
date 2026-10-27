@@ -71,6 +71,9 @@ tr.chg td{background:rgba(33,102,172,.18)}
 #vlt{margin-top:16px;padding:12px;background:var(--panel);border:1px solid var(--line)}
 #vlt h3{margin:0 0 6px;font:600 16px/1.2 Georgia,serif}
 svg.stripsvg{border:0;background:none}
+#nch{margin-top:16px;padding:12px;background:var(--panel);border:1px solid var(--line)}
+#nch:empty{display:none}
+#nch h3{margin:0 0 6px;font:600 16px/1.2 Georgia,serif}
 @media (max-width:520px){.top{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:700px){#key th,#key td,#vs th,#vs td{padding:4px 4px;font-size:13px}.kbar{width:34px}}
 #vs,#key{overflow-x:auto}
@@ -135,6 +138,7 @@ details.guide .gb p{margin:0 0 8px}
 <div>
 <div id="key"><h3>Key counties</h3><p class="note">The key counties will appear here.</p></div>
 <div id="vlt"></div>
+<div id="nch"></div>
 </div>
 </div>
 <p class="note" id="cov"></p>
@@ -306,6 +310,31 @@ function stripBox(){
   if(p)s+="<polygon points=\""+X(p.M)+",44 "+(X(p.M)+6)+",53 "+X(p.M)+",62 "+(X(p.M)-6)+",53\" fill=\"currentColor\"/>";
   if(now!=null)s+="<path d=\"M"+X(now)+",60 l-5,9 h10z\" fill=\"currentColor\"/><text x=\""+Math.max(65,Math.min(235,X(now)))+"\" y=\"97\" text-anchor=\"middle\" font-size=\"10\" fill=\"currentColor\">Counted so far "+f(now)+"</text>";
   box.innerHTML="<h3>This race vs last time</h3>"+s+"</svg><p class=\"note\" style=\"margin:4px 0 0\">"+(p?"Diamond: projected final, with the 80% range shaded. Triangle: counted so far. Circle: the "+C.yr+" final.":"The projection appears once county results are in. Circle: the "+C.yr+" final.")+"</p>"}
+  let HIST=null;
+function loadHistory(){return fetch("history.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{HIST=j&&Array.isArray(j.snaps)?j:null;nightChart()}).catch(()=>{})}
+function nightChart(){
+  const box=el("nch");
+  if(!HIST){box.innerHTML="";return}
+  const key=K==="sen"?"s":"g",pts=[];
+  for(const s of HIST.snaps){
+    const v=s[key];if(!v)continue;
+    const p=project(C,rekey(v,C.D),TURN[K]);
+    if(p)pts.push({t:new Date(s.t).getTime(),off:s.t.slice(-6),ds:s.t.slice(0,10),M:p.M,w:1.2816*p.sd})}
+  if(pts.length<2){box.innerHTML="";return}
+  const past=(C.sD-C.sR)/(C.sD+C.sR)*100,f=x=>(x>=0?"D+":"R+")+Math.abs(x).toFixed(1),hr=3600000,n=pts.length;
+  const mn=Math.min(...pts.map(p=>p.M-p.w),past,0)-1,mx=Math.max(...pts.map(p=>p.M+p.w),past,0)+1;
+  const seven=new Date(pts[0].ds+"T19:00:00"+pts[0].off).getTime(),start=pts[0].t<seven?Math.floor(pts[0].t/hr)*hr:seven,end=Math.max(start+7*hr,pts[n-1].t);
+  const X=t=>40+(t-start)/(end-start)*250,Y=m=>8+(mx-m)/(mx-mn)*92,mu="style=\"fill:var(--mute)\"";
+  let s="<svg class=\"stripsvg\" viewBox=\"0 0 300 130\" role=\"img\" aria-label=\"Projected margin and 80% range through the night\">";
+  [Math.ceil(mn/5)*5,0,Math.floor(mx/5)*5].filter((v,i,a)=>v>=mn&&v<=mx&&a.indexOf(v)===i).forEach(t=>{s+="<line x1=\"40\" x2=\"290\" y1=\""+Y(t)+"\" y2=\""+Y(t)+"\" style=\"stroke:var(--line)\"/><text x=\"36\" y=\""+(Y(t)+3)+"\" text-anchor=\"end\" font-size=\"9\" "+mu+">"+(t===0?"even":(t<0?"R+":"D+")+Math.abs(t))+"</text>"});
+  s+="<polygon points=\""+pts.map(p=>X(p.t)+","+Y(p.M+p.w)).join(" ")+" "+pts.slice().reverse().map(p=>X(p.t)+","+Y(p.M-p.w)).join(" ")+"\" fill=\"currentColor\" opacity=\".13\"/>";
+  s+="<line x1=\"40\" x2=\"290\" y1=\""+Y(past)+"\" y2=\""+Y(past)+"\" stroke-dasharray=\"4 3\" style=\"stroke:var(--mute)\"/><text x=\"290\" y=\""+(Y(past)-3)+"\" text-anchor=\"end\" font-size=\"9\" "+mu+">"+C.yr+" final "+f(past)+"</text>";
+  s+="<polyline points=\""+pts.map(p=>X(p.t)+","+Y(p.M)).join(" ")+"\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/>";
+  const L=pts[n-1];
+  s+="<circle cx=\""+X(L.t)+"\" cy=\""+Y(L.M)+"\" r=\"4\" fill=\"currentColor\"/><text x=\""+Math.min(X(L.t),265)+"\" y=\""+(Y(L.M)-8)+"\" text-anchor=\"end\" font-size=\"9\" fill=\"currentColor\">"+f(L.M)+"</text>";
+  const fmt=new Intl.DateTimeFormat("en-US",{timeZone:"America/Chicago",hour:"numeric"});
+  for(let t=start;t<=end+1000;t+=2*hr)s+="<text x=\""+X(t)+"\" y=\"120\" text-anchor=\"middle\" font-size=\"9\" "+mu+">"+fmt.format(t)+"</text>";
+  box.innerHTML="<h3>Projected margin through the night</h3>"+s+"</svg><p class=\"note\" style=\"margin:4px 0 0\">Line: projected margin. Shading: 80% range. Dashed line: the "+C.yr+" final. Saved about every 15 minutes, times Central.</p>"}
   function keyPanel(){
   const fc=x=>x==null?"–":"<span class=\""+(x>=0?"d":"r")+"\">"+fm(x)+"</span>";
   const rows=KEYC.filter(n=>D[n]).map(n=>{
@@ -419,7 +448,7 @@ function scoreboard(){
     h+="<br><br><b>Projected final share</b><br>"+C.d26+": "+pc(dS)+" &middot; "+C.r26+": "+pc(100-dS)+"<br>80% range for "+C.d26+": "+pc(dS-w)+" to "+pc(dS+w);}
   h+="<br><span class=\"note\">Two-party only. Third-party votes are not included, so real percentages will be a bit lower for both.</span>";
   box.innerHTML=h;
-}function needle(){scoreboard();voteShare();stripBox();
+}function needle(){scoreboard();voteShare();stripBox();nightChart();
   const box=el("ndl"),p=project(C,VOTES[K],TURN[K]);
   if(!p){box.innerHTML="<p class=\"note\">No votes counted yet. The gauge appears once county results are entered.</p>";return}
   const Y=m=>150-Math.max(-15,Math.min(15,m))*260/30,lo=p.M-1.2816*p.sd,hi=p.M+1.2816*p.sd,y=Y(p.M);
@@ -562,6 +591,7 @@ function loadVotes(){return fetch("data.json?t="+Date.now(),{cache:"no-store"}).
   });
 });
 setInterval(()=>loadVotes().then(refresh),60000); // reload data.json every minute
+loadHistory();setInterval(loadHistory,600000);
 </script>
 </body>
 </html>

@@ -29,6 +29,8 @@ jobs:
           python-version: "3.12"
       - name: Fetch results from civicAPI
         run: python fetch_results.py
+      - name: Update night-chart history
+        run: python history.py
       - name: Show what will be published
         run: |
           ls -l
@@ -36,7 +38,7 @@ jobs:
       - name: Collect site files
         run: |
           mkdir site
-          cp index.html data.json share.png site/ 
+          cp index.html data.json share.png history.json site/ 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

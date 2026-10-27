@@ -75,6 +75,10 @@ details.guide{margin:0 0 12px;background:var(--panel);border:1px solid var(--lin
 details.guide summary{cursor:pointer;padding:10px 12px;font-weight:600}
 details.guide .gb{padding:0 12px 6px;font-size:14px}
 details.guide .gb p{margin:0 0 8px}
+.kmwrap{position:relative}
+#kmrst{position:absolute;top:6px;right:6px;padding:4px 10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:13px system-ui;cursor:pointer}
+.kcard{margin-top:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);font-size:14px;min-height:56px}
+.kcard b{font:600 15px Georgia,serif}
 </style>
 </head>
 <body>
@@ -115,6 +119,9 @@ details.guide .gb p{margin:0 0 8px}
 <svg id="map" viewBox="0 0 600 560" role="img" aria-label="Map of Texas counties"></svg>
 <div id="msg">Loading map...</div>
 <div class="leg"><span id="l1"></span><i></i><span id="l2"></span></div>
+<h3 style="margin:14px 0 6px;font:600 16px/1.2 Georgia,serif">Key counties map</h3>
+<div class="kmwrap"><svg id="map2" viewBox="0 0 600 560" role="img" aria-label="Map of the key counties"></svg><button id="kmrst" hidden>Reset</button></div>
+<div class="kcard" id="kcard">Click a county in the Key counties table to zoom in.</div>
 </div>
 <div id="key"><h3>Key counties</h3><p class="note">The key counties will appear here.</p></div>
 </div>

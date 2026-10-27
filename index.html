@@ -71,6 +71,10 @@ tr.chg td{background:rgba(33,102,172,.18)}
 #vs,#key{overflow-x:auto}
 @media (min-width:521px) and (max-width:700px){.mapkey{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}#key{padding:8px}.kbar{display:none}}
 #sb{display:none!important}
+details.guide{margin:0 0 12px;background:var(--panel);border:1px solid var(--line)}
+details.guide summary{cursor:pointer;padding:10px 12px;font-weight:600}
+details.guide .gb{padding:0 12px 6px;font-size:14px}
+details.guide .gb p{margin:0 0 8px}
 </style>
 </head>
 <body>
@@ -78,6 +82,22 @@ tr.chg td{background:rgba(33,102,172,.18)}
 <h1 id="h1">Texas 2026</h1>
 <p class="sub"><span id="sub"></span> <span id="upd"></span></p>
 <div id="stat" hidden></div>
+  <details class="guide"><summary>How to read this page</summary><div class="gb">
+<p><b>Which past race is the comparison?</b> The Senate race is compared with 2018 (O'Rourke vs Cruz), the most recent Texas Senate race in a midterm year. The Governor race is compared with 2022 (Beto O'Rourke vs Abbott). Presidential years bring a different electorate, so they are not used.</p>
+<p><b>Two-party share.</b> Shares and margins use only the two main candidates.</p>
+<p><b>Counted.</b> The share of the vote we expect in that county that has been reported. It is an estimate, not a count.</p>
+<p><b>Swing.</b> How much a county has moved since the comparison race, among the votes counted so far. Small counties often report first, so early swings there can be large.</p>
+<p><b>80% range.</b> The model expects the final result to land inside this range 8 times in 10. It narrows as more vote comes in.</p>
+<p><b>Senate and Governor tabs.</b> Each race has its own tab. Use them to see where each race stands and how it differs from its comparison race.</p>
+<p><b>Early vote tab.</b> Shows how much early vote each county has cast so far in 2026, as a share of that county's final early vote in 2018 and 2022. It tells you whether turnout is running ahead of or behind past years before any results exist.</p>
+<p><b>Past result.</b> Who won each county in the comparison race. It is the baseline everything else is measured against.</p>
+<p><b>2026 result.</b> Who is leading each county tonight, and by how much, among the votes counted so far.</p>
+<p><b>Swing.</b> How far each county has moved toward one party or the other compared with the past race. It shows where the change is coming from.</p>
+<p><b>Vote left.</b> How much of each county's expected vote has not been counted yet. A county with little counted can still change a lot.</p>
+<p><b>Shift arrows.</b> The same swing as arrows. Blue arrows point toward Democrats, red toward Republicans, and longer means a bigger shift. Counties with too little counted are left blank.</p>
+<p><b>Key counties.</b> The 15 counties that carry the most weight or tend to signal where the night is heading.</p>
+<p><b>Estimates.</b> For most counties outside the 45 with exact past totals, the 2022 results are estimates.</p>
+</div></details>
 <div class="seg"><button id="tS" aria-pressed="true">Senate</button><button id="tG" aria-pressed="false">Governor</button><button id="tE" aria-pressed="false">Early vote</button></div>
 <div id="raceView">
 <div class="seg"><button id="bR" aria-pressed="true">Past result</button><button id="bT" aria-pressed="false">2026 result</button><button id="bS" aria-pressed="false">Swing</button><button id="bV" aria-pressed="false">Vote left</button><button id="bA" aria-pressed="false">Shift arrows</button></div>

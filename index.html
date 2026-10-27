@@ -261,8 +261,12 @@ function labels(){
   const kcol=n=>{const x=hasVotes()&&m26(n)!=null?m26(n):m18(n);return x==null?"#c9ced6":d3.interpolateRdBu(0.5+Math.max(-1,Math.min(1,x/40))/2)};
 let KSEL=null,KK=1;
 function kcardHtml(n){const o=left(n),v=vOf(n),p=Math.round(Math.min(o.cv/o.ev,1)*100);return "<b>"+n+" County</b><br>"+C.yr+": "+fm(m18(n))+(D[n]?vbar(D[n][1],D[n][0]):"")+(v?"2026: "+fm(m26(n))+" · swing "+fm(sw(n))+vbar(v[0],v[1])+"About "+p+"% of expected vote counted":"<br>2026: no votes entered yet")}
+function ring(n){
+  const is=f=>f&&f.properties&&f.properties.NAME===n;
+  d3.selectAll("#map path").style("stroke",f=>is(f)?"#000":null).style("stroke-width",f=>is(f)?3:null);
+}
 function kzoom(n){
-  KSEL=n;KK=1;
+  KSEL=n;KK=1; ring(n);
   const f=n&&GEO.f&&GEO.f.find(x=>x.properties.NAME===n);
   let vb="0 0 600 560";
   if(f){const b=GEO.path.bounds(f),w=b[1][0]-b[0][0],h=b[1][1]-b[0][1];
@@ -275,11 +279,11 @@ function kzoom(n){
 }
 function keyMap(){
   if(!GEO.f)return;
-  const key=new Set(KEYC.filter(n=>D[n])),isK=f=>key.has(f.properties.NAME);
+  const key=new Set(KEYC.filter(n=>D[n])),isK=f=>key.has(f.properties.NAME),isS=f=>isK(f)||f.properties.NAME===KSEL;
   d3.select("#map2").selectAll("path").data(GEO.f).join("path").attr("d",GEO.path)
-    .style("fill",f=>isK(f)?kcol(f.properties.NAME):"var(--line)")
-    .style("fill-opacity",f=>isK(f)?1:.35)
-    .style("stroke",f=>isK(f)?"var(--ink)":"var(--bg)")
+    .style("fill",f=>isS(f)?kcol(f.properties.NAME):"var(--line)")
+    .style("fill-opacity",f=>isS(f)?1:.35)
+    .style("stroke",f=>isS(f)?"var(--ink)":"var(--bg)")
     .style("stroke-width",f=>f.properties.NAME===KSEL?3:isK(f)?1:.3)
     .style("vector-effect","non-scaling-stroke")
     .style("pointer-events",f=>isK(f)?"auto":"none")
@@ -287,7 +291,7 @@ function keyMap(){
     .on("mousemove",(e,f)=>tip(e,f.properties.NAME))
     .on("mouseleave",()=>{el("tip").hidden=true});
   const lg=d3.select("#map2").selectAll("g.kl").data(KSEL?[0]:[]).join("g").attr("class","kl").style("pointer-events","none");
-  lg.selectAll("text").data(GEO.f.filter(isK)).join("text").attr("x",f=>GEO.path.centroid(f)[0]).attr("y",f=>GEO.path.centroid(f)[1]).attr("text-anchor","middle").attr("font-size",11/KK).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3/KK).attr("paint-order","stroke").text(f=>f.properties.NAME);
+  lg.selectAll("text").data(GEO.f.filter(isS)).join("text").attr("x",f=>GEO.path.centroid(f)[0]).attr("y",f=>GEO.path.centroid(f)[1]).attr("text-anchor","middle").attr("font-size",11/KK).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3/KK).attr("paint-order","stroke").text(f=>f.properties.NAME);
   el("kcard").innerHTML=KSEL?kcardHtml(KSEL):"Click a county in the Key counties table to zoom in.";
 }
   const KEYC=["Harris","Dallas","Tarrant","Bexar","Travis","Collin","Fort Bend","Williamson","El Paso","Montgomery","Hidalgo","Cameron","Angelina","Potter","Gillespie"];
@@ -523,7 +527,7 @@ el("eCopy").onclick=()=>{
   const done=()=>{el("eMsg").textContent="Copied "+names.length+" counties."};
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(line).then(done,()=>window.prompt("Copy this line:",line));
   else window.prompt("Copy this line:",line)};
-el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr){show(tr.dataset.n);if(KEYC.includes(tr.dataset.n))kzoom(tr.dataset.n)}};
+el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr){show(tr.dataset.n);kzoom(tr.dataset.n)}};
 el("bR").onclick=()=>{picked=true;mode="r18";paint()};
 el("bS").onclick=()=>{picked=true;mode="sw";paint()};
 el("bV").onclick=()=>{picked=true;mode="vl";paint()};
@@ -583,7 +587,7 @@ function loadVotes(){return fetch("data.json?t="+Date.now(),{cache:"no-store"}).
         const proj=d3.geoMercator().fitSize([600,560],{type:"FeatureCollection",features:tx});
     GEO.proj=proj;
     d3.select("#map").selectAll("path").data(tx).join("path").attr("d",GEO.path=d3.geoPath(proj))
-      .on("click",(e,f)=>show(f.properties.NAME))
+      .on("click",(e,f)=>{show(f.properties.NAME);kzoom(f.properties.NAME)})
       .on("mousemove",(e,f)=>tip(e,f.properties.NAME))
       .on("mouseleave",()=>{el("tip").hidden=true});
     GEO.f=tx;

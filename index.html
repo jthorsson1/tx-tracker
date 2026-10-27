@@ -523,7 +523,7 @@ el("eCopy").onclick=()=>{
   const done=()=>{el("eMsg").textContent="Copied "+names.length+" counties."};
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(line).then(done,()=>window.prompt("Copy this line:",line));
   else window.prompt("Copy this line:",line)};
-  el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr)show(tr.dataset.n)};
+el("rows").onclick=e=>{const tr=e.target.closest("tr");if(tr){show(tr.dataset.n);if(KEYC.includes(tr.dataset.n))kzoom(tr.dataset.n)}};
 el("bR").onclick=()=>{picked=true;mode="r18";paint()};
 el("bS").onclick=()=>{picked=true;mode="sw";paint()};
 el("bV").onclick=()=>{picked=true;mode="vl";paint()};

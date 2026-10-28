@@ -4,7 +4,7 @@
 Runs inside GitHub Actions. The result is published with the site and is NOT saved back
 to the repository, so the repository's data.json only holds your settings.
 Settings in data.json:  "mode": "rehearsal" or "live"   |   "manual": true to skip civicAPI
-Each county is stored as [Democrat votes, Republican votes].
+Each county is stored as [Democrat votes, Republican votes]; third-party votes are stored apart, in "other".
 """
 import datetime
 import json
@@ -55,15 +55,22 @@ def pick(cands, spec):
     return max(found, key=lambda c: c.get("votes") or 0) if found else None
 
 
+def other_votes(cands, d, r):
+    """Votes for every candidate who is not the chosen Democrat or Republican (Brown, Dixon, write-ins...)."""
+    return sum(int(c.get("votes") or 0) for c in cands if c is not d and c is not r)
+
+
 def convert(race, dspec, rspec):
-    """One civicAPI race -> ({county: [D, R]}, [D, R]), or None if it looks wrong."""
+    """One civicAPI race -> ({county: [D, R]}, [D, R], {county: other votes}), or None if it looks wrong."""
     counties = {}
+    others = {}
     for region in (race.get("region_results") or {}).values():
         if region.get("type") != "County":
             continue
         d = pick(region.get("candidates", []), dspec)
         r = pick(region.get("candidates", []), rspec)
         counties[region["name"]] = [int((d or {}).get("votes") or 0), int((r or {}).get("votes") or 0)]
+        others[region["name"]] = other_votes(region.get("candidates", []), d, r)
     if len(counties) < 200:
         print("only", len(counties), "counties found")
         return None
@@ -72,7 +79,15 @@ def convert(race, dspec, rspec):
     if d is None or r is None:
         print("could not find both candidates")
         return None
-    return counties, [int(d.get("votes") or 0), int(r.get("votes") or 0)]
+    others["Statewide"] = other_votes(race.get("candidates", []), d, r)
+    return counties, [int(d.get("votes") or 0), int(r.get("votes") or 0)], others
+
+
+def keep_other(data, prev, key):
+    """Keep the earlier 'other' numbers for a race whose new numbers could not be used."""
+    old = (prev.get("other") or {}).get(key)
+    if old:
+        data.setdefault("other", {})[key] = old
 
 
 def main(root=None):
@@ -105,16 +120,26 @@ def main(root=None):
             problems.append(key + ": could not read civicAPI")
             if prev_ok and key in prev:
                 data[key] = prev[key]
+                keep_other(data, prev, key)
             continue
-        counties, statewide = result
+        counties, statewide, others = result
         old = (prev.get(key) or {}).get("Statewide") if prev_ok else None
         if old and sum(statewide) < 0.98 * sum(old):
             problems.append(key + ": total dropped, kept earlier numbers")
             data[key] = prev[key]
+            keep_other(data, prev, key)
             continue
         new = dict(counties)
         new["Statewide"] = statewide
         data[key] = new
+        # "Other" votes go in their own section so the [D, R] pairs everything else reads stay as they are.
+        # If the number looks wrong (over 15% of all votes), it is left out and the page falls back to two-party.
+        tot = sum(statewide) + others["Statewide"]
+        if tot and others["Statewide"] / tot <= 0.15:
+            data.setdefault("other", {})[key] = others
+        else:
+            data.setdefault("other", {}).pop(key, None)
+            print(key + ": other votes looked wrong, left out")
         status["counties"] = len(counties)
 
     status["ok"] = not problems

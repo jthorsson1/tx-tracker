@@ -112,15 +112,15 @@ details.guide .gb p{margin:0 0 8px}
 <div id="stat" hidden></div>
   <details class="guide"><summary>How to read this page</summary><div class="gb">
 <p><b>Which past race is the comparison?</b> The Senate race is compared with 2018 (O'Rourke vs Cruz), the most recent Texas Senate race in a midterm year. The Governor race is compared with 2022 (Beto O'Rourke vs Abbott). Presidential years bring a different electorate, so they are not used.</p>
-<p></p><b>Two-party margins.</b> Margins, the gauge, the maps and the county bars use only the two main candidates. When the feed reports other candidates, the Vote share table also shows them as “Other” and its percentages become shares of all votes.
+<p><b>Two-party margins.</b> Margins, the gauge, the maps and the county bars use only the two main candidates. When the feed reports other candidates, the Vote share table also shows them as “Other” and its percentages become shares of all votes.</p>
 <p><b>Counted.</b> The share of the vote expected in that county that has been reported. It is an estimate, not a count.</p>
+<p><b>Swing.</b> How much a county has moved since the comparison race, among the votes counted so far. Small counties often report first, so early swings there can be large.</p>
 <p><b>80% range.</b> The model expects the final result to land inside this range 8 times in 10. It narrows as more vote comes in.</p>
 <p><b>The gauge.</b> The arrow shows the projected final margin (D+15 at the top, R+15 at the bottom, "even" in the middle). The model takes how far each county has moved from the comparison race so far and applies that to the vote still out, using the statewide average swing for counties with little counted. The box is the 80% range, and the chance to win is how much of that range sits on each side of even. The range starts about 8 points either side of the projection, shrinks to about 5 with half the vote in and about 2 with 90% in, and never gets tighter than about 1. It narrows on a set schedule as more vote is counted, not by checking how well the projection is doing. Early in the night these numbers are rough.</p>
 <p><b>Senate and Governor tabs.</b> Each race has its own tab. Use them to see where each race stands and how it differs from its comparison race.</p>
 <p><b>Early vote tab.</b> Shows how much early vote each county has cast so far in 2026, as a share of that county's final early vote in 2018 and 2022. It tells you whether turnout is running ahead of or behind past years before any results exist.</p>
 <p><b>Past result.</b> Who won each county in the comparison race. It is the baseline everything else is measured against.</p>
 <p><b>2026 result.</b> Who is leading each county tonight, and by how much, among the votes counted so far.</p>
-<p><b>Swing.</b> How far each county has moved toward one party or the other compared with the past race. It shows where the change is coming from.</p>
 <p><b>Vote left.</b> How much of each county's expected vote has not been counted yet. A county with little counted can still change a lot.</p>
 <p><b>Shift arrows.</b> The same swing as arrows. Blue arrows point toward Democrats, red toward Republicans, and longer means a bigger shift. Counties with too little counted are left blank.</p>
 <p><b>Key counties.</b> The 15 counties that carry the most weight or tend to signal where the night is heading.</p>
@@ -128,6 +128,7 @@ details.guide .gb p{margin:0 0 8px}
 <p><b>Just updated bar.</b> When new votes come in, this bar lists the counties that changed in the last 3 minutes, with the votes added and how each county's margin moved, for example "R+8.2 → R+7.9." The blue ▲ means the margin moved toward the Democrat and the red ▼ toward the Republican. Biggest additions come first, and the bar scrolls through the top 12; hover or tap it to pause, and "Show all" opens the full list. Click or tap any county name to bring it up on the maps. A margin can move simply because a different kind of vote arrived, such as mail ballots first and Election Day votes later, so a shift is not a sign that voters changed their minds. A county whose total goes down shows "corrected." The bar only reflects changes the page sees while it is open.</p>
 <p><b>This race vs last time.</b> The scale under the Key counties table compares this race with the last one. The circle is the final margin of the comparison race (2018 or 2022). The triangle is the margin among the votes counted so far. The diamond is the projected final, and the shaded box around it is the 80% range. Early in the night the triangle and the diamond can sit on opposite sides of even, because the first votes reported often come from counties that lean one way. The projection adjusts for the vote still out.</p>
 <p><b>Other candidates.</b> Margins, the gauge and the night chart count only the two major parties. When the feed reports votes for the other candidates (Libertarians, Greens, write-ins), Vote share shows them as “Other” and the percentages become shares of all votes, and the county pop-ups show each county’s Other share next to the last election’s. Winning takes more votes than the other candidate, not 50%.</p>
+<p><b>Click and zoom.</b> Click a county on the top map, in the main county table, or in the Key counties table to see its numbers. A click in the main county table zooms both maps. A click in the Key counties table, or on a key county on the lower map, zooms the lower map. <button id="demoBtn" type="button">Show me</button></p>
 <p><b>Night chart.</b> The chart below "This race vs last time" shows how the projected final margin has moved since polls closed. The line is the model's projection at each saved snapshot, taken about every 15 minutes. The shaded band is the 80% range, and it narrows as more vote is counted. The dashed line is the final margin of the comparison race, so you can see whether the night is running ahead of or behind it. It appears once at least two snapshots with votes have been saved. Times are Central.</p>
 <p><b>Estimates.</b> For most counties outside the 45 with exact past totals, the 2022 results are estimates.</p>
 </div></details>
@@ -589,6 +590,18 @@ el("grp").onchange=table;
 el("tmore").onclick=()=>{SHOWALL=!SHOWALL;table()};
 el("key").onclick=e=>{const tr=e.target.closest("tr");if(tr&&tr.dataset.n){show(tr.dataset.n);kzoom(tr.dataset.n)}};
 el("kmrst").onclick=el("mrst").onclick=()=>{kzoom(null);mzoom(null)};
+{const d=el("demoBtn");if(d)d.onclick=()=>{
+  const steps=[
+    ["1 of 4: Key counties table. A click on Dallas shows its numbers and zooms the lower map.","#map2",()=>document.querySelector('#key tr[data-n="Dallas"]').click()],
+    ["2 of 4: County table. A click on Travis zooms both maps.","#map",()=>document.querySelector('#rows tr[data-n="Travis"]').click()],
+    ["3 of 4: Top map. A click on Bexar outlines it and zooms the lower map.","#map",()=>d3.selectAll("#map path").filter(f=>f.properties.NAME==="Bexar").dispatch("click")],
+    ["4 of 4: Lower map. A click on Harris zooms in there.","#map2",()=>d3.selectAll("#map2 path").filter(f=>f.properties.NAME==="Harris").dispatch("click")]];
+  const t=document.createElement("div");
+  t.style.cssText="position:fixed;left:12px;right:12px;bottom:12px;z-index:50;padding:10px 12px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:15px";
+  document.body.appendChild(t);d.disabled=true;
+  const end=()=>{try{kzoom(null);mzoom(null)}catch(e){}t.remove();d.disabled=false};
+  steps.forEach((s,i)=>setTimeout(()=>{try{t.textContent=s[0];const e=document.querySelector(s[1]);if(e)e.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>{try{s[2]()}catch(x){}},700)}catch(x){}},i*4500));
+  setTimeout(end,steps.length*4500)}}
   setRace("sen");
 function statusText(j){
   const s=j.status||{};let t="";

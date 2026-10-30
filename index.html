@@ -123,7 +123,7 @@ details.guide .gb p{margin:0 0 8px}
 <p><b>2026 result.</b> Who is leading each county tonight, and by how much, among the votes counted so far.</p>
 <p><b>Vote left.</b> How much of each county's expected vote has not been counted yet. A county with little counted can still change a lot.</p>
 <p><b>Shift arrows.</b> The same swing as arrows. Blue arrows point toward Democrats, red toward Republicans, and longer means a bigger shift. Counties with too little counted are left blank.</p>
-<p><b>Key counties.</b> The 15 counties that carry the most weight or tend to signal where the night is heading.</p>
+<p><b>Key counties.</b> The 16 counties that carry the most weight or tend to signal where the night is heading.</p>
 <p><b>Model rating.</b> Under the gauge, the ladder turns the chance to win into a label: Toss-up (under 55%), Tilt (55% to 60%), Lean (60% to 80%), Likely (80% to 95%) and Safe (95% or more). Lean, Likely and Safe use the cutoffs one published forecast uses; Tilt is this page's own. The label describes this model only. It is not a call. Before 20% of the expected vote is counted it says "Too early to rate," and Safe is held back until half is counted.</p>
 <p><b>Just updated bar.</b> When new votes come in, this bar lists the counties that changed in the last 3 minutes, with the votes added and how each county's margin moved, for example "R+8.2 → R+7.9." The blue ▲ means the margin moved toward the Democrat and the red ▼ toward the Republican. Biggest additions come first, and the bar scrolls through the top 12; hover or tap it to pause, and "Show all" opens the full list. Click or tap any county name to bring it up on the maps. A margin can move simply because a different kind of vote arrived, such as mail ballots first and Election Day votes later, so a shift is not a sign that voters changed their minds. A county whose total goes down shows "corrected." The bar only reflects changes the page sees while it is open.</p>
 <p><b>This race vs last time.</b> The scale under the Key counties table compares this race with the last one. The circle is the final margin of the comparison race (2018 or 2022). The triangle is the margin among the votes counted so far. The diamond is the projected final, and the shaded box around it is the 80% range. Early in the night the triangle and the diamond can sit on opposite sides of even, because the first votes reported often come from counties that lean one way. The projection adjusts for the vote still out.</p>
@@ -334,7 +334,7 @@ function keyMap(){
   lg.selectAll("text").data(GEO.f.filter(isS)).join("text").attr("x",f=>GEO.path.centroid(f)[0]).attr("y",f=>GEO.path.centroid(f)[1]).attr("text-anchor","middle").attr("font-size",11/KK).attr("fill","#15202b").attr("stroke","#fff").attr("stroke-width",3/KK).attr("paint-order","stroke").text(f=>f.properties.NAME);
   el("kcard").innerHTML=KSEL?kcardHtml(KSEL):"Click a county in the Key counties table to zoom in.";
 }
-  const KEYC=["Harris","Dallas","Tarrant","Bexar","Travis","Collin","Fort Bend","Williamson","El Paso","Montgomery","Hidalgo","Cameron","Angelina","Potter","Gillespie"];
+  const KEYC=["Harris","Dallas","Tarrant","Bexar","Travis","Collin", "Denton","Fort Bend","Williamson","El Paso","Montgomery","Hidalgo","Cameron","Angelina","Potter","Gillespie"];
 function stripBox(){
   const box=el("vlt"),V=VOTES[K];
   let cd=0,cr=0;

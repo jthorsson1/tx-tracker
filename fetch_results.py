@@ -60,19 +60,6 @@ def other_votes(cands, d, r):
     return sum(int(c.get("votes") or 0) for c in cands if c is not d and c is not r)
 
 
-def describe(key, race):
-    """One-time check: print which fields the feed carries (for example a call or winner). The page does not use this."""
-    try:
-        if not race:
-            return
-        top = {k: (v if not isinstance(v, (dict, list)) else type(v).__name__ + "[%d]" % len(v)) for k, v in race.items()}
-        print("feed fields", key, json.dumps(top)[:1500])
-        for c in (race.get("candidates") or [])[:6]:
-            print("feed candidate", key, json.dumps({k: v for k, v in c.items() if not isinstance(v, (dict, list))})[:400])
-    except Exception as e:
-        print("describe error", e)
-
-
 def convert(race, dspec, rspec):
     """One civicAPI race -> ({county: [D, R]}, [D, R], {county: other votes}), or None if it looks wrong."""
     counties = {}
@@ -103,6 +90,26 @@ def keep_other(data, prev, key):
         data.setdefault("other", {})[key] = old
 
 
+def called_for(race, dspec, rspec):
+    """"D" or "R" when the feed marks exactly one of the two as the winner, otherwise None."""
+    cands = race.get("candidates") or []
+    if sum(int(c.get("votes") or 0) for c in cands) <= 0:
+        return None
+    d = pick(cands, dspec)
+    r = pick(cands, rspec)
+    if d is None or r is None:
+        return None
+    dw, rw = d.get("winner") is True, r.get("winner") is True
+    return "D" if dw and not rw else "R" if rw and not dw else None
+
+
+def keep_called(data, prev, key):
+    """Keep the earlier call for a race whose new numbers could not be used."""
+    old = (prev.get("called") or {}).get(key)
+    if old:
+        data.setdefault("called", {})[key] = old
+
+
 def main(root=None):
     root = pathlib.Path(root) if root else pathlib.Path(__file__).resolve().parent
     data_file = root / "data.json"
@@ -128,13 +135,13 @@ def main(root=None):
     problems = []
     for key, (race_id, dspec, rspec) in CONFIG[mode].items():
         race = fetch(race_id)
-        describe(key, race)
         result = convert(race, dspec, rspec) if race else None
         if not result:
             problems.append(key + ": could not read civicAPI")
             if prev_ok and key in prev:
                 data[key] = prev[key]
                 keep_other(data, prev, key)
+                keep_called(data, prev, key)
             continue
         counties, statewide, others = result
         old = (prev.get(key) or {}).get("Statewide") if prev_ok else None
@@ -142,6 +149,7 @@ def main(root=None):
             problems.append(key + ": total dropped, kept earlier numbers")
             data[key] = prev[key]
             keep_other(data, prev, key)
+            keep_called(data, prev, key)
             continue
         new = dict(counties)
         new["Statewide"] = statewide
@@ -155,6 +163,14 @@ def main(root=None):
             data.setdefault("other", {}).pop(key, None)
             print(key + ": other votes looked wrong, left out")
         status["counties"] = len(counties)
+        # A call is the feed's own winner flag. It is shown only when exactly one of the two is marked.
+        who = called_for(race, dspec, rspec)
+        if who:
+            data.setdefault("called", {})[key] = who
+        else:
+            data.setdefault("called", {}).pop(key, None)
+    if data.get("show_calls") is False or not data.get("called"):
+        data.pop("called", None)  # "show_calls": false in data.json switches calls off
 
     status["ok"] = not problems
     status["note"] = "; ".join(problems)

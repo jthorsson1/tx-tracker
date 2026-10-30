@@ -9,8 +9,8 @@
 <meta property="og:image" content="https://jthorsson1.github.io/tx-tracker/share.png">
 <meta property="og:url" content="https://jthorsson1.github.io/tx-tracker/">
 <style>
-:root{--bg:#f6f7f9;--ink:#15202b;--mute:#5b6773;--line:#d9dee4;--panel:#fff}
-@media (prefers-color-scheme:dark){:root{--bg:#10161d;--ink:#e8edf2;--mute:#9aa7b4;--line:#27323d;--panel:#171f28}}
+:root{--bg:#f6f7f9;--ink:#15202b;--mute:#5b6773;--line:#d9dee4;--panel:#fff;--ok:#1e7a3c}
+@media (prefers-color-scheme:dark){:root{--bg:#10161d;--ink:#e8edf2;--mute:#9aa7b4;--line:#27323d;--panel:#171f28;--ok:#4cc26d}}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
 main{max-width:900px;margin:0 auto;padding:20px 16px 48px}
 h1{font:700 28px/1.15 Georgia,serif;margin:0 0 4px}
@@ -103,6 +103,7 @@ details.guide .gb p{margin:0 0 8px}
 .kcard{margin-top:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);font-size:14px;min-height:56px}
 .rl{margin:8px 0;font-size:13px}.rl div{display:flex;justify-content:space-between;gap:8px;padding:2px 6px;border-left:4px solid transparent}.rl .on{background:var(--panel);border-left-color:var(--ink);font-weight:600}
 .kcard b{font:600 15px Georgia,serif}
+.ck{color:var(--ok);font-weight:700;font-size:12px;margin-left:6px;white-space:nowrap}
 .av{width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:8px;object-fit:cover}
 </style>
 </head>
@@ -129,6 +130,7 @@ details.guide .gb p{margin:0 0 8px}
 <p><b>Just updated bar.</b> When new votes come in, this bar lists the counties that changed in the last 3 minutes, with the votes added and how each county's margin moved, for example "R+8.2 → R+7.9." The blue ▲ means the margin moved toward the Democrat and the red ▼ toward the Republican. Biggest additions come first, and the bar scrolls through the top 12; hover or tap it to pause, and "Show all" opens the full list. Click or tap any county name to bring it up on the maps. A margin can move simply because a different kind of vote arrived, such as mail ballots first and Election Day votes later, so a shift is not a sign that voters changed their minds. A county whose total goes down shows "corrected." The bar only reflects changes the page sees while it is open.</p>
 <p><b>This race vs last time.</b> The scale under the Key counties table compares this race with the last one. The circle is the final margin of the comparison race (2018 or 2022). The triangle is the margin among the votes counted so far. The diamond is the projected final, and the shaded box around it is the 80% range. Early in the night the triangle and the diamond can sit on opposite sides of even, because the first votes reported often come from counties that lean one way. The projection adjusts for the vote still out.</p>
 <p><b>Other candidates.</b> Margins, the gauge and the night chart count only the two major parties. When the feed reports votes for the other candidates (Libertarians, Greens, write-ins), Vote share shows them as “Other” and the percentages become shares of all votes, and the county pop-ups show each county’s Other share next to the last election’s. Winning takes more votes than the other candidate, not 50%.</p>
+<p><b>Calls.</b> When civicAPI has called a race, a green “✓ Called” appears next to that candidate in Vote share. It is civicAPI’s call, not this page’s and not the Secretary of State’s, and other sources may call a race sooner or later. The model’s chance to win and its rating do not change when a race is called.</p>
 <p><b>Click and zoom.</b> Click a county on the top map, in the main county table, or in the Key counties table to see its numbers. A click in the main county table zooms both maps. A click in the Key counties table, or on a key county on the lower map, zooms the lower map. <button id="demoBtn" type="button">Show me</button></p>
 <p><b>Night chart.</b> The chart below "This race vs last time" shows how the projected final margin has moved since polls closed. The line is the model's projection at each saved snapshot, taken about every 15 minutes. The shaded band is the 80% range, and it narrows as more vote is counted. The dashed line is the final margin of the comparison race, so you can see whether the night is running ahead of or behind it. It appears once at least two snapshots with votes have been saved. Times are Central.</p>
 <p><b>Photo credits.</b> The small portraits in Vote share are cropped and resized images from Wikimedia Commons. They come from different years and were not chosen to favor any candidate. James Talarico (2025): <a href="https://commons.wikimedia.org/wiki/File:James_Talarico_Press_Conference.jpg" target="_blank" rel="noopener">Antonioaesparza</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Ken Paxton (2015): <a href="https://en.wikipedia.org/wiki/File:Rand_Paul,_Ken_Paxton,_Angela_Paxton,_Wade_Emmert_%26_Steve_Munisteri_(16409502515).jpg" target="_blank" rel="noopener">Gage Skidmore</a>, <a href="https://creativecommons.org/licenses/by-sa/2.0/" target="_blank" rel="noopener">CC BY-SA 2.0</a>. Gina Hinojosa (2014): <a href="https://commons.wikimedia.org/wiki/File:Gina_Hinojosa_at_the_State_Democratic_Convention_(cropped).jpg" target="_blank" rel="noopener">Jpardo210</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Greg Abbott (2024): <a href="https://en.wikipedia.org/wiki/File:Greg_Abbott_at_NASA_2024_(cropped).jpg" target="_blank" rel="noopener">NASA / Robert Markowitz</a>, public domain. NASA does not endorse this site or any candidate.</p>
@@ -195,6 +197,7 @@ const PO={"sen":{"Anderson":94,"Andrews":17,"Angelina":153,"Aransas":56,"Archer"
   sen:{label:"U.S. Senate",yr:2018,rn:"Cruz",dn:"O'Rourke",r26:"Paxton",d26:"Talarico",total:4260553+4045632,sR:4260553,sD:4045632,D:SEN},
   gov:{label:"Governor",yr:2022,rn:"Abbott",dn:"Beto O'Rourke",r26:"Abbott",d26:"Hinojosa",total:4437099+3553656,sR:4437099,sD:3553656,D:GOV}
 };
+const CALL={sen:null,gov:null}; // "D" or "R" when civicAPI has called the race, from data.json "called"
 const OTH={sen:{},gov:{}}; // county -> votes for all other candidates (Libertarian, Green, write-ins), from data.json "other"
 const VOTES={sen:{},gov:{}}; // county -> [Democrat, Republican], loaded from data.json
 const TURN={sen:1.10,gov:1.05}; // expected 2026 vote compared with the past election; set in data.json
@@ -400,14 +403,15 @@ function voteShare(){
   if(st&&st[0]>=cd&&st[1]>=cr){cd=st[0];cr=st[1];if((O.Statewide||0)>=co)co=O.Statewide||0}
   const p=project(C,V,TURN[K]),pc=x=>x.toFixed(1)+"%",t=cd+cr,u=co>0&&t>0?co/(t+co):0,s=1-u; // u: other candidates' share of all votes counted
   const nowD=t>0?cd/t*100*s:null,nowR=t>0?cr/t*100*s:null,finD=p?(50+p.M/2)*s:null,finR=p?(50-p.M/2)*s:null,w=p?1.2816*p.sd/2*s:null;
+  const ck=side=>CALL[K]===side?"<span class=\"ck\" title=\"Called for this candidate by civicAPI\">✓ Called</span>":"";
   const rng=(lo,hi)=>lo==null?"–":lo.toFixed(1)+"–"+pc(hi);
   const vt=x=>t>0?"<br><span style=\"color:var(--mute);font-size:12px\">"+x.toLocaleString("en-US")+" votes</span>":"";
   const row=(name,now,fin,lo,hi)=>"<tr><td>"+name+"</td><td>"+(now==null?"–":pc(now))+"</td><td>"+(fin==null?"–":pc(fin))+"</td><td>"+rng(lo,hi)+"</td></tr>";
   const note=u>0?"Share of all votes. “Other” is every candidate besides the two major parties, held at its share of the vote counted so far. “Now” is the counted vote; “Projected final” is the model’s estimate, and the range is where it should land about 80% of the time. Leading takes more votes than the other candidate, not 50%: a tie would be about "+pc(50*s)+" each.":
     "Two-party share only. “Now” is the counted vote; “Projected final” is the model’s estimate, and the range is where it should land about 80% of the time.";
   el("vs").innerHTML="<h3>Vote share</h3><table><thead><tr><th>Candidate</th><th>Now</th><th>Proj. final</th><th>80% range</th></tr></thead><tbody>"+
-    row(pic(C.d26)+C.d26+" (D)"+vt(cd),nowD,finD,p?finD-w:null,p?finD+w:null)+row(pic(C.r26)+C.r26+" (R)"+vt(cr),nowR,finR,p?finR-w:null,p?finR+w:null)+(u>0?row("Other"+vt(co),u*100,u*100,null,null):"")+
-    "</tbody></table><p class=\"note\" style=\"margin:8px 0 0\">"+note+"</p>"}
+    row(pic(C.d26)+C.d26+" (D)"+ck("D")+vt(cd),nowD,finD,p?finD-w:null,p?finD+w:null)+row(pic(C.r26)+C.r26+" (R)"+ck("R")+vt(cr),nowR,finR,p?finR-w:null,p?finR+w:null)+(u>0?row("Other"+vt(co),u*100,u*100,null,null):"")+
+    "</tbody></table><p class=\"note\" style=\"margin:8px 0 0\">"+note+(CALL[K]?" “✓ Called” is civicAPI’s call for that candidate. It is separate from the model’s chance to win.":"")+"</p>"}
   function table(){
   const have=new Set(NAMES.map(norm));
   const extra=Object.keys(VOTES[K]).filter(n=>n!=="Statewide"&&!have.has(norm(n)));
@@ -656,6 +660,7 @@ function statPill(){
   p.className=cls;p.textContent=txt;p.hidden=false}
 function loadVotes(){return fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(r=>r.json()).then(j=>{
   VOTES.sen=rekey(j.senate||{},SEN);VOTES.gov=rekey(j.governor||{},GOV);
+  CALL.sen=(j.called||{}).senate==="D"||(j.called||{}).senate==="R"?j.called.senate:null;CALL.gov=(j.called||{}).governor==="D"||(j.called||{}).governor==="R"?j.called.governor:null;
   OTH.sen=rekey((j.other||{}).senate||{},SEN);OTH.gov=rekey((j.other||{}).governor||{},GOV);
   const now=Date.now(),ns={sen:snap(VOTES.sen),gov:snap(VOTES.gov)};
   if(PSNAP)for(const k of ["sen","gov"])for(const n of Object.keys(ns[k])){const a=ns[k][n],b=PSNAP[k][n]||[0,0];if(a[0]+a[1]!==b[0]+b[1]){CHG[k][n]=now;const dd=a[0]-b[0],dr=a[1]-b[1],o=CHGV[k][n],keep=o&&now-o.t<180000&&!o.fix;const mb=b[0]+b[1]>0?(b[0]-b[1])/(b[0]+b[1])*100:null,ma=(a[0]-a[1])/(a[0]+a[1])*100;CHGV[k][n]=dd+dr<0?{t:now,d:0,r:0,fix:true,from:null,to:ma}:{t:now,d:(keep?o.d:0)+dd,r:(keep?o.r:0)+dr,fix:false,from:keep?o.from:mb,to:ma}}}

@@ -60,6 +60,19 @@ def other_votes(cands, d, r):
     return sum(int(c.get("votes") or 0) for c in cands if c is not d and c is not r)
 
 
+def describe(key, race):
+    """One-time check: print which fields the feed carries (for example a call or winner). The page does not use this."""
+    try:
+        if not race:
+            return
+        top = {k: (v if not isinstance(v, (dict, list)) else type(v).__name__ + "[%d]" % len(v)) for k, v in race.items()}
+        print("feed fields", key, json.dumps(top)[:1500])
+        for c in (race.get("candidates") or [])[:6]:
+            print("feed candidate", key, json.dumps({k: v for k, v in c.items() if not isinstance(v, (dict, list))})[:400])
+    except Exception as e:
+        print("describe error", e)
+
+
 def convert(race, dspec, rspec):
     """One civicAPI race -> ({county: [D, R]}, [D, R], {county: other votes}), or None if it looks wrong."""
     counties = {}
@@ -115,6 +128,7 @@ def main(root=None):
     problems = []
     for key, (race_id, dspec, rspec) in CONFIG[mode].items():
         race = fetch(race_id)
+        describe(key, race)
         result = convert(race, dspec, rspec) if race else None
         if not result:
             problems.append(key + ": could not read civicAPI")

@@ -103,6 +103,8 @@ details.guide .gb p{margin:0 0 8px}
 .kcard{margin-top:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);font-size:14px;min-height:56px}
 .rl{margin:8px 0;font-size:13px}.rl div{display:flex;justify-content:space-between;gap:8px;padding:2px 6px;border-left:4px solid transparent}.rl .on{background:var(--panel);border-left-color:var(--ink);font-weight:600}
 .kcard b{font:600 15px Georgia,serif}
+.tie{margin:12px 0 0;padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--ink);background:var(--bg);font-size:15px;line-height:1.4}
+.tie small{display:block;margin-top:3px;color:var(--mute);font-size:12.5px}
 .ck{color:var(--ok);font-weight:700;font-size:12px;margin-left:6px;white-space:nowrap}
 .av{width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:8px;object-fit:cover}
 </style>
@@ -131,6 +133,8 @@ details.guide .gb p{margin:0 0 8px}
 <p><b>This race vs last time.</b> The scale under the Key counties table compares this race with the last one. The circle is the final margin of the comparison race (2018 or 2022). The triangle is the margin among the votes counted so far. The diamond is the projected final, and the shaded box around it is the 80% range. Early in the night the triangle and the diamond can sit on opposite sides of even, because the first votes reported often come from counties that lean one way. The projection adjusts for the vote still out.</p>
 <p><b>Other candidates.</b> Margins, the gauge and the night chart count only the two major parties. When the feed reports votes for the other candidates (Libertarians, Greens, write-ins), Vote share shows them as “Other” and the percentages become shares of all votes, and the county pop-ups show each county’s Other share next to the last election’s. Winning takes more votes than the other candidate, not 50%.</p>
 <p><b>Calls.</b> When civicAPI has called a race, a green “✓ Called” appears next to that candidate in Vote share. It is civicAPI’s call, not this page’s and not the Secretary of State’s, and other sources may call a race sooner or later. The model’s chance to win and its rating do not change when a race is called.</p>
+<p><b>Tie benchmark.</b> Each county card shows the result that county would be expected to give if the whole state ends in a tie, as a margin and as each candidate’s share of the two-party vote. It is built from how far the county sat from the statewide result in 2018 and 2022, averaged, then adjusted so the benchmarks add up to a tie on this page’s expected vote. It does not use the 2024 presidential vote, because a presidential electorate differs from a midterm one. It is a yardstick, not a forecast. Counties move by different amounts each year. The border counties are the least predictable: they shifted the most between 2018 and 2022 and moved again in 2024, so they may land well above or below their benchmarks. Early counted votes also often lean differently from the final count. No single county has to hit its benchmark: a candidate can fall short in one place and make it up in another.</p>
+<p><b>Split needed for a tie.</b> Under Vote share, once about 5% of the expected vote is counted, a line says how the remaining two-party vote would have to split for a tie. It is arithmetic on this page’s expected vote, not a prediction, and it updates with each data refresh. The line is left out when a tie is out of reach on that estimate.</p>
 <p><b>Click and zoom.</b> Click a county on the top map, in the main county table, or in the Key counties table to see its numbers. A click in the main county table zooms both maps. A click in the Key counties table, or on a key county on the lower map, zooms the lower map. <button id="demoBtn" type="button">Show me</button></p>
 <p><b>Night chart.</b> The chart below "This race vs last time" shows how the projected final margin has moved since polls closed. The line is the model's projection at each saved snapshot, taken about every 15 minutes. The shaded band is the 80% range, and it narrows as more vote is counted. The dashed line is the final margin of the comparison race, so you can see whether the night is running ahead of or behind it. It appears once at least two snapshots with votes have been saved. Times are Central.</p>
 <p><b>Photo credits.</b> The small portraits in Vote share are cropped and resized images from Wikimedia Commons. They come from different years and were not chosen to favor any candidate. James Talarico (2025): <a href="https://commons.wikimedia.org/wiki/File:James_Talarico_Press_Conference.jpg" target="_blank" rel="noopener">Antonioaesparza</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Ken Paxton (2015): <a href="https://en.wikipedia.org/wiki/File:Rand_Paul,_Ken_Paxton,_Angela_Paxton,_Wade_Emmert_%26_Steve_Munisteri_(16409502515).jpg" target="_blank" rel="noopener">Gage Skidmore</a>, <a href="https://creativecommons.org/licenses/by-sa/2.0/" target="_blank" rel="noopener">CC BY-SA 2.0</a>. Gina Hinojosa (2014): <a href="https://commons.wikimedia.org/wiki/File:Gina_Hinojosa_at_the_State_Democratic_Convention_(cropped).jpg" target="_blank" rel="noopener">Jpardo210</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>. Greg Abbott (2024): <a href="https://en.wikipedia.org/wiki/File:Greg_Abbott_at_NASA_2024_(cropped).jpg" target="_blank" rel="noopener">NASA / Robert Markowitz</a>, public domain. NASA does not endorse this site or any candidate.</p>
@@ -221,6 +225,13 @@ function othTxt(n){
 const m26=n=>{const v=vOf(n);return v&&v[0]+v[1]>0?(v[0]-v[1])/(v[0]+v[1])*100:null};
 const sw=n=>{const a=m26(n),b=m18(n);return a==null||b==null?null:a-b};
 const fm=x=>x==null?"–":(x>=0?"D+":"R+")+Math.abs(x).toFixed(1);
+// Tie benchmark: how far a county usually sits from the statewide margin (average of 2018 and 2022), re-centered so the benchmarks add up to an exact tie on that race's own vote weights.
+const BM=(()=>{const mg=v=>(v[1]-v[0])/(v[0]+v[1])*100,st=T=>{let r=0,d=0;for(const k in T){r+=T[k][0];d+=T[k][1]}return (d-r)/(d+r)*100},Ms=st(SEN),Mg=st(GOV),lean={},out={};
+  for(const n in SEN)if(GOV[n]&&SEN[n][0]+SEN[n][1]>0&&GOV[n][0]+GOV[n][1]>0)lean[n]=((mg(SEN[n])-Ms)+(mg(GOV[n])-Mg))/2;
+  for(const [k,T] of [["sen",SEN],["gov",GOV]]){let tot=0,wm=0;for(const n in lean){const w=T[n][0]+T[n][1];tot+=w;wm+=w*lean[n]}wm/=tot;out[k]={};for(const n in lean)out[k][n]=lean[n]-wm}
+  return out})();
+const bmOf=n=>{const o=BM[K]||{};if(o[n]!=null)return o[n];const k=Object.keys(o).find(x=>norm(x)===norm(n));return k?o[k]:null};
+const bmTxt=n=>{const b=bmOf(n);return b==null?"":"<br>Tie benchmark: "+fm(b)+" ("+C.d26+" "+(50+b/2).toFixed(1)+"%, "+C.r26+" "+(50-b/2).toFixed(1)+"%)"};
 function col(n){
   if(mode!=="r26"&&!D[n])return "#c9ced6";
   const x=mode==="r18"?m18(n):mode==="r26"?m26(n):sw(n);
@@ -233,8 +244,8 @@ function show(n){
   SEL=n;
   if(!D[n]){const u=vOf(n);el("info").innerHTML=u?"<b>"+n+" County</b><br>2026: "+C.d26+" "+u[0].toLocaleString()+", "+C.r26+" "+u[1].toLocaleString()+" ("+fm(m26(n))+")"+vbar(u[0],u[1])+"No past result loaded for this county yet.":n+" County: no data yet.";return;}
   const v=vOf(n);
-  el("info").innerHTML="<b>"+n+" County</b><br>"+C.yr+": "+C.rn+" "+D[n][0].toLocaleString()+", "+C.dn+" "+D[n][1].toLocaleString()+" ("+fm(m18(n))+")"+vbar(D[n][1],D[n][0])+
-        (v?"2026: "+C.d26+" "+v[0].toLocaleString()+", "+C.r26+" "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")"+vbar(v[0],v[1])+"About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"<br>2026: no votes entered yet")+othTxt(n);
+  el("info").innerHTML="<b>"+n+" County</b><br>"+C.yr+": "+C.dn+" "+D[n][1].toLocaleString()+", "+C.rn+" "+D[n][0].toLocaleString()+" ("+fm(m18(n))+")"+vbar(D[n][1],D[n][0])+
+        (v?"2026: "+C.d26+" "+v[0].toLocaleString()+", "+C.r26+" "+v[1].toLocaleString()+" ("+fm(m26(n))+", swing "+fm(sw(n))+")"+vbar(v[0],v[1])+"About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"<br>2026: no votes entered yet")+bmTxt(n)+othTxt(n);
 }
 function tipHtml(n){
   const v=vOf(n),p=D[n],f=x=>x.toLocaleString(),pc=(a,b)=>(a/(a+b)*100).toFixed(1)+"%";
@@ -242,7 +253,7 @@ function tipHtml(n){
   if(v&&v[0]+v[1]>0)h+="<br>2026: "+C.d26+" "+f(v[0])+" ("+pc(v[0],v[1])+")<br>"+C.r26+" "+f(v[1])+" ("+pc(v[1],v[0])+")"+vbar(v[0],v[1])+(p?"About "+Math.round(Math.min(left(n).cv/left(n).ev,1)*100)+"% of expected vote counted":"");
   else h+="<br>2026: no votes entered yet";
   if(p)h+="<br><br>"+C.yr+": "+C.dn+" "+f(p[1])+" ("+pc(p[1],p[0])+")<br>"+C.rn+" "+f(p[0])+" ("+pc(p[0],p[1])+")"+vbar(p[1],p[0]);
-  return h+othTxt(n)+"<small>Bars and county percentages are the two-party vote</small>"}
+  return h+bmTxt(n)+othTxt(n)+"<small>Bars and county percentages are the two-party vote</small>"}
   function tip(e,n){
   const t=el("tip");
   t.innerHTML=tipHtml(n);t.hidden=false;
@@ -404,14 +415,16 @@ function voteShare(){
   const p=project(C,V,TURN[K]),pc=x=>x.toFixed(1)+"%",t=cd+cr,u=co>0&&t>0?co/(t+co):0,s=1-u; // u: other candidates' share of all votes counted
   const nowD=t>0?cd/t*100*s:null,nowR=t>0?cr/t*100*s:null,finD=p?(50+p.M/2)*s:null,finR=p?(50-p.M/2)*s:null,w=p?1.2816*p.sd/2*s:null;
   const ck=side=>CALL[K]===side?"<span class=\"ck\" title=\"Called for this candidate by civicAPI\">✓ Called</span>":"";
+  const E=(C.sR+C.sD)*TURN[K],cnt=cd+cr,rem=E-cnt,pT=rem>0&&cnt>=0.05*E?(E/2-cd)/rem:null; // share of the remaining two-party vote the Democrat needs for a tie
+  const tieTxt=pT!=null&&pT>0&&pT<1?"<div class=\"tie\"><b>To tie:</b> the remaining two-party vote would need to split <b>"+(pT*100).toFixed(1)+"% "+C.d26+", "+((1-pT)*100).toFixed(1)+"% "+C.r26+"</b>.<small>Based on this page’s expected vote, so it shifts if that estimate is off.</small></div>":"";
   const rng=(lo,hi)=>lo==null?"–":lo.toFixed(1)+"–"+pc(hi);
   const vt=x=>t>0?"<br><span style=\"color:var(--mute);font-size:12px\">"+x.toLocaleString("en-US")+" votes</span>":"";
   const row=(name,now,fin,lo,hi)=>"<tr><td>"+name+"</td><td>"+(now==null?"–":pc(now))+"</td><td>"+(fin==null?"–":pc(fin))+"</td><td>"+rng(lo,hi)+"</td></tr>";
   const note=u>0?"Share of all votes. “Other” is every candidate besides the two major parties, held at its share of the vote counted so far. “Now” is the counted vote; “Projected final” is the model’s estimate, and the range is where it should land about 80% of the time. Leading takes more votes than the other candidate, not 50%: a tie would be about "+pc(50*s)+" each.":
     "Two-party share only. “Now” is the counted vote; “Projected final” is the model’s estimate, and the range is where it should land about 80% of the time.";
-  el("vs").innerHTML="<h3>Vote share</h3><table><thead><tr><th>Candidate</th><th>Now</th><th>Proj. final</th><th>80% range</th></tr></thead><tbody>"+
+  el("vs").innerHTML="<h3>Vote share</h3>"+tieTxt.replace("class=\"tie\"","class=\"tie\" style=\"margin:0 0 12px\"")+"<table><thead><tr><th>Candidate</th><th>Now</th><th>Proj. final</th><th>80% range</th></tr></thead><tbody>"+
     row(pic(C.d26)+C.d26+" (D)"+ck("D")+vt(cd),nowD,finD,p?finD-w:null,p?finD+w:null)+row(pic(C.r26)+C.r26+" (R)"+ck("R")+vt(cr),nowR,finR,p?finR-w:null,p?finR+w:null)+(u>0?row("Other"+vt(co),u*100,u*100,null,null):"")+
-    "</tbody></table><p class=\"note\" style=\"margin:8px 0 0\">"+note+(CALL[K]?" “✓ Called” is civicAPI’s call for that candidate. It is separate from the model’s chance to win.":"")+"</p>"}
+    "</tbody></table>"+"<p class=\"note\" style=\"margin:8px 0 0\">"+note+(CALL[K]?" “✓ Called” is civicAPI’s call for that candidate. It is separate from the model’s chance to win.":"")+"</p>"}
   function table(){
   const have=new Set(NAMES.map(norm));
   const extra=Object.keys(VOTES[K]).filter(n=>n!=="Statewide"&&!have.has(norm(n)));

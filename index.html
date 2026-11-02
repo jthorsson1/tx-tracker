@@ -423,7 +423,7 @@ function voteShare(){
   const note=u>0?"Share of all votes. “Other” is every candidate besides the two major parties, held at its share of the vote counted so far. “Now” is the counted vote; “Projected final” is the model’s estimate, and the range is where it should land about 80% of the time. Leading takes more votes than the other candidate, not 50%: a tie would be about "+pc(50*s)+" each.":
     "Two-party share only. “Now” is the counted vote; “Projected final” is the model’s estimate, and the range is where it should land about 80% of the time.";
   el("vs").innerHTML="<h3>Vote share</h3>"+tieTxt.replace("class=\"tie\"","class=\"tie\" style=\"margin:0 0 12px\"")+"<table><thead><tr><th>Candidate</th><th>Now</th><th>Proj. final</th><th>80% range</th></tr></thead><tbody>"+
-    row(pic(C.d26)+C.d26+" (D)"+ck("D")+vt(cd),nowD,finD,p?finD-w:null,p?finD+w:null)+row(pic(C.r26)+C.r26+" (R)"+ck("R")+vt(cr),nowR,finR,p?finR-w:null,p?finR+w:null)+(u>0?row("Other"+vt(co),u*100,u*100,null,null):"")+
+    row(pic(C.d26)+C.d26+" (D)"+ck("D")+vt(cd),nowD,finD,p?finD-w:null,p?finD+w:null)+row(pic(C.r26)+C.r26+" (R)"+ck("R")+vt(cr),nowR,finR,p?finR-w:null,p?finR+w:null)+(u>0?row("Other"+vt(co),u*100,u*100,null,null):"")+(t>0?row("<b>Total counted</b>"+vt(t+co),100,null,null,null):"")+
     "</tbody></table>"+"<p class=\"note\" style=\"margin:8px 0 0\">"+note+(CALL[K]?" “✓ Called” is civicAPI’s call for that candidate. It is separate from the model’s chance to win.":"")+"</p>"}
   function table(){
   const have=new Set(NAMES.map(norm));
@@ -475,8 +475,8 @@ function bubbles(){
     else{const rc=st[0]+st[1]-cD-cR;restLeft=Math.max(0,restEv-rc);restTxt="Rest of state: about "+f(rc)+" counted of about "+f(restEv)+" expected, so about "+f(restLeft)+" left.";}
   }
   el("vl").innerHTML="<h3>Estimated vote left</h3>"+
-    "<p>Tracked counties: "+f(cv)+" counted of about "+f(ev)+" expected, so about <b>"+f(lt)+"</b> left.</p>"+
-    "<p>"+restTxt+"</p><p>All together: about <b>"+f(lt+restLeft)+"</b> left.</p>"+
+    "<p>"+(restEv<1?"Two-party votes counted so far: "+f(cv)+" of about "+f(ev)+" expected":"Tracked counties: "+f(cv)+" counted of about "+f(ev)+" expected")+", so about <b>"+f(lt)+"</b> left.</p>"+
+    (restEv<1?"":"<p>"+restTxt+"</p><p>All together: about <b>"+f(lt+restLeft)+"</b> left.</p>")+
     "<p>Most vote left: "+top.slice(0,5).filter(t=>t[1]>=0.5).map(t=>t[0]+" "+f(t[1])).join(", ")+"</p>"+earlyBox()+
     "<p class=\"note\">Expected vote is last time's total times the turnout number in data.json ("+TURN[K]+"). It is an estimate, not a count.</p>";
 }
